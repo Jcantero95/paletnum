@@ -136,9 +136,8 @@ export function SubmissionCard({ submission, likedByMe, onSelect, isSelected }: 
             <div
               key={c.id}
               title={c.nombre_color}
-              style={{ background: c.hex ?? '#ccc' }}
-              className="w-5 h-5 rounded-md flex-shrink-0"
               style={{ background: c.hex ?? '#ccc', border: '1px solid rgba(0,0,0,0.05)' }}
+              className="w-5 h-5 rounded-md flex-shrink-0"
             />
           ))}
           {palette.length > 8 && (
