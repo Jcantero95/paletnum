@@ -132,6 +132,7 @@ function LoginContent() {
           <div className="rounded-2xl p-5 shadow-cozy"
                style={{ background: 'white', border: '1px solid rgba(92,92,110,0.15)' }}>
 
+            {/* OPCIONES */}
             {vista === 'opciones' && (
               <div className="space-y-3">
                 <button onClick={handleGoogle}
@@ -147,11 +148,18 @@ function LoginContent() {
                   Continuar con Google
                 </button>
 
+                <button onClick={() => setVista('registro')}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl
+                             py-3 text-sm font-sans font-medium hover:opacity-90 transition-opacity"
+                  style={{ background: '#C9908A', color: 'white', border: 'none' }}>
+                  ✨ Crear cuenta nueva
+                </button>
+
                 <button onClick={() => setVista('password')}
                   className="w-full flex items-center justify-center gap-2 rounded-xl
                              py-3 text-sm font-sans font-medium hover:opacity-90 transition-opacity"
                   style={{ border: '1px solid rgba(92,92,110,0.15)', background: '#FAF6F1' }}>
-                  🔑 Ingresar con email y contraseña
+                  🔑 Ya tengo cuenta — Ingresar
                 </button>
 
                 <button onClick={() => setVista('magic')}
@@ -160,18 +168,10 @@ function LoginContent() {
                   style={{ border: '1px solid rgba(92,92,110,0.15)', background: '#FAF6F1', color: '#8A8A9A' }}>
                   ✉️ Ingresar como invitado (link mágico)
                 </button>
-
-                <div className="pt-2 border-t text-center"
-                     style={{ borderColor: 'rgba(92,92,110,0.15)' }}>
-                  <button onClick={() => setVista('registro')}
-                    className="text-sm font-sans hover:underline"
-                    style={{ color: '#C9908A' }}>
-                    ¿No tenés cuenta? Registrate
-                  </button>
-                </div>
               </div>
             )}
 
+            {/* LOGIN CON CONTRASEÑA */}
             {vista === 'password' && (
               <>
                 <button onClick={() => { setVista('opciones'); setError(null) }}
@@ -212,6 +212,7 @@ function LoginContent() {
               </>
             )}
 
+            {/* MAGIC LINK */}
             {vista === 'magic' && (
               <>
                 <button onClick={() => { setVista('opciones'); setError(null); setSent(false) }}
@@ -259,6 +260,7 @@ function LoginContent() {
               </>
             )}
 
+            {/* REGISTRO */}
             {vista === 'registro' && (
               <>
                 <button onClick={() => { setVista('opciones'); setError(null) }}
