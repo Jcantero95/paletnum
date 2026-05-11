@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 type Vista = 'opciones' | 'magic' | 'password' | 'registro'
 
-export default function LoginPage() {
+function LoginContent() {
   const searchParams = useSearchParams()
   const router       = useRouter()
   const next         = searchParams.get('next') ?? '/buscar'
@@ -97,8 +97,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: '#FAF6F1' }}>
-
-      {/* Header idéntico al Navbar */}
       <header style={{ background: '#5C5C6E' }}
               className="px-5 py-4 flex items-center justify-between flex-shrink-0">
         <div>
@@ -111,17 +109,14 @@ export default function LoginPage() {
             Código de colores para pintar por números
           </p>
         </div>
-        <Link href="/buscar"
-              className="text-xs font-sans transition-colors"
+        <Link href="/buscar" className="text-xs font-sans transition-colors"
               style={{ color: 'rgba(250,246,241,0.6)' }}>
           ← Volver
         </Link>
       </header>
 
-      {/* Contenido */}
       <div className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-sm">
-
           <div className="text-center mb-6">
             <div className="text-4xl mb-3">🎨</div>
             <h1 className="font-display text-2xl mb-1" style={{ color: '#5C5C6E' }}>
@@ -137,7 +132,6 @@ export default function LoginPage() {
           <div className="rounded-2xl p-5 shadow-cozy"
                style={{ background: 'white', border: '1px solid rgba(92,92,110,0.15)' }}>
 
-            {/* OPCIONES */}
             {vista === 'opciones' && (
               <div className="space-y-3">
                 <button onClick={handleGoogle}
@@ -178,7 +172,6 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* LOGIN CON CONTRASEÑA */}
             {vista === 'password' && (
               <>
                 <button onClick={() => { setVista('opciones'); setError(null) }}
@@ -219,7 +212,6 @@ export default function LoginPage() {
               </>
             )}
 
-            {/* MAGIC LINK */}
             {vista === 'magic' && (
               <>
                 <button onClick={() => { setVista('opciones'); setError(null); setSent(false) }}
@@ -267,7 +259,6 @@ export default function LoginPage() {
               </>
             )}
 
-            {/* REGISTRO */}
             {vista === 'registro' && (
               <>
                 <button onClick={() => { setVista('opciones'); setError(null) }}
@@ -339,7 +330,6 @@ export default function LoginPage() {
                 </form>
               </>
             )}
-
           </div>
 
           <p className="text-xs text-center mt-4 leading-relaxed px-2 font-sans"
@@ -355,5 +345,20 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center"
+           style={{ background: '#FAF6F1' }}>
+        <div className="font-display text-2xl" style={{ color: '#C9908A' }}>
+          Palet<span style={{ fontStyle: 'italic' }}>Num</span>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }
