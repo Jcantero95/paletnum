@@ -1,0 +1,133 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&family=Dancing+Script:wght@400;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --crema:     #FAF6F1;
+    --crema2:    #F4EDE4;
+    --crema3:    #EDE0D4;
+    --rosa:      #C9908A;
+    --rosa-l:    #E8C4C0;
+    --rosa-ll:   #F5E8E6;
+    --arena:     #B59E7D;
+    --arena-l:   #D9CBBA;
+    --arena-ll:  #F0EAE0;
+    --pizarra:   #5C5C6E;
+    --pizarra2:  #8A8A9A;
+    --sage:      #8FAF8F;
+    --sage-l:    #D4E8D4;
+    --borde:     rgba(92,92,110,0.15);
+  }
+
+  * { box-sizing: border-box; }
+
+  html { font-family: 'Lora', serif; }
+
+  body {
+    background: var(--crema);
+    color: var(--pizarra);
+    font-family: 'Lora', serif;
+    font-size: 15px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 400;
+    color: var(--pizarra);
+  }
+
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%238A8A9A' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px !important;
+  }
+}
+
+@layer components {
+
+  /* Tipografía */
+  .font-display  { font-family: 'Playfair Display', serif; }
+  .font-script   { font-family: 'Dancing Script', cursive; }
+
+  /* Card base */
+  .card {
+    @apply bg-white border border-borde rounded-2xl p-5 shadow-cozy;
+  }
+
+  /* Inputs */
+  .input {
+    @apply w-full px-3 py-2.5 border border-crema3 rounded-xl text-sm bg-crema
+           font-sans text-pizarra
+           focus:outline-none focus:border-rosa focus:bg-white transition-colors;
+  }
+
+  /* Label */
+  .label {
+    @apply block text-xs uppercase tracking-wider text-pizarra2 mb-1.5 font-sans;
+  }
+
+  /* Botones */
+  .btn-primary {
+    @apply bg-rosa text-white px-5 py-2.5 rounded-xl font-sans text-sm font-medium
+           hover:opacity-90 transition-opacity
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-crema2 border border-borde text-pizarra2 px-4 py-2.5 rounded-xl
+           text-sm font-sans hover:bg-crema3 transition-colors;
+  }
+
+  .btn-ghost {
+    @apply bg-arena-ll border border-arena-l text-arena px-4 py-2.5 rounded-xl
+           text-sm font-sans hover:opacity-90 transition-opacity;
+  }
+
+  .btn-dark {
+    @apply bg-pizarra text-crema px-5 py-2.5 rounded-xl text-sm font-sans font-medium
+           hover:opacity-90 transition-opacity;
+  }
+
+  /* Pills / badges */
+  .pill {
+    @apply inline-block rounded-full px-3 py-0.5 text-xs font-sans;
+  }
+
+  .pill-rosa {
+    @apply bg-rosa-ll text-rosa border border-rosa-l;
+  }
+
+  .pill-arena {
+    @apply bg-arena-ll text-arena border border-arena-l;
+  }
+
+  .pill-dark {
+    @apply bg-pizarra text-crema;
+  }
+
+  .pill-sage {
+    @apply bg-sage-l text-sage border border-sage;
+  }
+
+  .pill-crema {
+    @apply bg-crema2 text-pizarra2 border border-borde;
+  }
+
+  /* Section label con Dancing Script */
+  .section-script {
+    @apply font-script text-rosa text-lg mb-3 flex items-center gap-2;
+  }
+  .section-script::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--borde);
+  }
+}
