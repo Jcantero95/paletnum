@@ -15,7 +15,7 @@ export default async function PerfilPage() {
     .from('usuarios').select('*').eq('id', user.id).single()
 
   const { data: marcas } = await supabase
-    .from('marcas').select('id, nombre').order('nombre')
+    .from('marcas').select('*').order('nombre')
 
   let pendientesCount = 0
   if (user?.email === ADMIN_EMAIL) {
