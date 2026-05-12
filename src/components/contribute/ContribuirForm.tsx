@@ -245,7 +245,7 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
                 </>
             }
           </div>
-          <input ref={fotoRef} type="file" accept="image/*" className="hidden" onChange={handleFoto} />
+          <input ref={fotoRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFoto} />
         </div>
       </div>
 
@@ -342,8 +342,7 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
                   </>
               }
             </div>
-            <input ref={registroRef} type="file" accept="image/*"
-              className="hidden" onChange={handleRegistro} />
+            <input ref={registroRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleRegistro} />
             {registroPreview && (
               <p className="text-xs mt-2 text-center font-sans" style={{ color: '#8FAF8F' }}>
                 ✓ Foto cargada correctamente
