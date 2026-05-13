@@ -36,7 +36,7 @@ export function Navbar({ usuario, stats, pendientes = 0, userEmail }: NavbarProp
             <span style={{
               fontFamily: "'Dancing Script', cursive",
               fontSize: '14px',
-              color: ''#FFFFFF'',
+              color: '#FFFFFF',
               opacity: 1,
             }}>
               by La chica de los hobbies
