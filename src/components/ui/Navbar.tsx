@@ -26,21 +26,23 @@ export function Navbar({ usuario, stats, pendientes = 0, userEmail }: NavbarProp
 
   return (
     <>
-      <Link href="/buscar" className="font-display text-2xl tracking-tight"
-      style={{ color: '#FAF6F1' }}>
-  Palet<span style={{ color: '#E8C4C0', fontStyle: 'italic' }}>Num</span>
-</Link>
-<div className="hidden sm:flex items-center gap-2 mt-0.5">
-  <p className="font-script text-sm"
-     style={{ color: 'rgba(250,246,241,0.5)', fontFamily: "'Dancing Script', cursive" }}>
-    Código de colores para pintar por números
-  </p>
-  <span style={{ color: 'rgba(250,246,241,0.25)' }} className="text-xs">·</span>
-  <p className="font-script text-sm"
-     style={{ color: '#E8C4C0', fontFamily: "'Dancing Script', cursive", opacity: 0.7 }}>
-    by La chica de los hobbies
-  </p>
-</div>
+      <header style={{ background: '#5C5C6E' }} className="px-5 py-4 flex items-center justify-between">
+        <div>
+          <Link href="/buscar" className="font-display text-2xl tracking-tight"
+                style={{ color: '#FAF6F1' }}>
+            Palet<span style={{ color: '#E8C4C0', fontStyle: 'italic' }}>Num</span>
+          </Link>
+          <div className="hidden sm:flex items-center gap-2 mt-0.5">
+            <p className="font-script text-sm"
+               style={{ color: 'rgba(250,246,241,0.5)', fontFamily: "'Dancing Script', cursive" }}>
+              Código de colores para pintar por números
+            </p>
+            <span className="text-xs" style={{ color: 'rgba(250,246,241,0.25)' }}>·</span>
+            <p className="font-script text-sm"
+               style={{ color: '#E8C4C0', fontFamily: "'Dancing Script', cursive", opacity: 0.7 }}>
+              by La chica de los hobbies
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -62,7 +64,6 @@ export function Navbar({ usuario, stats, pendientes = 0, userEmail }: NavbarProp
             </div>
           )}
 
-          {/* Campana admin */}
           {esAdmin && (
             <Link href="/admin"
               className="relative flex items-center justify-center w-8 h-8 rounded-full transition-colors"
@@ -119,7 +120,6 @@ export function Navbar({ usuario, stats, pendientes = 0, userEmail }: NavbarProp
         </div>
       </header>
 
-      {/* Nav tabs */}
       <nav style={{ background: '#F4EDE4', borderBottom: '1px solid rgba(92,92,110,0.15)' }}
            className="flex">
         {links.map(l => (
