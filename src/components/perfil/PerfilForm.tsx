@@ -12,14 +12,33 @@ interface Props {
   tipoAuth: string
 }
 
+const REDES = [
+  { value: 'instagram', label: 'Instagram', prefix: 'https://instagram.com/', placeholder: 'tu_usuario' },
+  { value: 'tiktok',    label: 'TikTok',    prefix: 'https://tiktok.com/@',   placeholder: 'tu_usuario' },
+  { value: 'youtube',   label: 'YouTube',   prefix: 'https://youtube.com/@',  placeholder: 'tu_canal'   },
+]
+
+function parsearRedSocial(social: string | null) {
+  if (!social) return { red: '', usuario: '' }
+  for (const r of REDES) {
+    if (social.startsWith(r.prefix)) {
+      return { red: r.value, usuario: social.replace(r.prefix, '') }
+    }
+  }
+  return { red: 'instagram', usuario: social.replace(/^@/, '') }
+}
+
 export function PerfilForm({ usuario, marcas, userEmail, tipoAuth }: Props) {
   const router   = useRouter()
   const supabase = createClient()
 
+  const socialParsed = parsearRedSocial(usuario.social)
+
   const [nombre,        setNombre]        = useState(usuario.nombre ?? '')
   const [apellido,      setApellido]      = useState(usuario.apellido ?? '')
   const [username,      setUsername]      = useState(usuario.username ?? '')
-  const [social,        setSocial]        = useState(usuario.social ?? '')
+  const [redSocial,     setRedSocial]     = useState(socialParsed.red)
+  const [usuarioRed,    setUsuarioRed]    = useState(socialParsed.usuario)
   const [marcaFav,      setMarcaFav]      = useState(usuario.marca_favorita ?? '')
   const [fechaNac,      setFechaNac]      = useState(usuario.fecha_nacimiento ?? '')
   const [passActual,    setPassActual]    = useState('')
@@ -33,11 +52,16 @@ export function PerfilForm({ usuario, marcas, userEmail, tipoAuth }: Props) {
   const [okPerfil,      setOkPerfil]      = useState(false)
   const [okPass,        setOkPass]        = useState(false)
 
+  function getSocialUrl() {
+    if (!redSocial || !usuarioRed) return null
+    const red = REDES.find(r => r.value === redSocial)
+    return red ? `${red.prefix}${usuarioRed}` : null
+  }
+
   async function handleGuardarPerfil(e: React.FormEvent) {
     e.preventDefault()
     setLoadingPerfil(true); setErrorPerfil(null); setOkPerfil(false)
 
-    // Verificar username único si cambió
     if (username !== usuario.username) {
       const { data: existing } = await supabase
         .from('usuarios').select('id').eq('username', username).single()
@@ -51,7 +75,7 @@ export function PerfilForm({ usuario, marcas, userEmail, tipoAuth }: Props) {
       nombre,
       apellido,
       username,
-      social:           social || null,
+      social:           getSocialUrl(),
       marca_favorita:   marcaFav || null,
       fecha_nacimiento: fechaNac || null,
     }).eq('id', usuario.id)
@@ -79,10 +103,8 @@ export function PerfilForm({ usuario, marcas, userEmail, tipoAuth }: Props) {
       setLoadingPass(false); return
     }
 
-    // Verificar contraseña actual
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: userEmail,
-      password: passActual,
+      email: userEmail, password: passActual,
     })
     if (signInError) {
       setErrorPass('La contraseña actual es incorrecta.')
@@ -101,38 +123,46 @@ export function PerfilForm({ usuario, marcas, userEmail, tipoAuth }: Props) {
   }
 
   const esGoogle = tipoAuth === 'google'
+  const redSeleccionada = REDES.find(r => r.value === redSocial)
 
   return (
     <div className="space-y-5">
 
       {/* Avatar y resumen */}
-      <div className="bg-white border border-paper3 rounded-xl p-5 flex items-center gap-4">
-        <div className="w-16 h-16 rounded-full bg-accent flex items-center justify-center text-white text-2xl font-medium flex-shrink-0">
+      <div className="bg-white border border-borde rounded-xl p-5 flex items-center gap-4 shadow-cozy">
+        <div className="w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-display flex-shrink-0"
+             style={{ background: '#C9908A' }}>
           {usuario.avatar_url
             ? <img src={usuario.avatar_url} alt="avatar" className="w-full h-full rounded-full object-cover" />
             : (usuario.nombre?.charAt(0) ?? '?')}
         </div>
         <div>
-          <p className="font-medium text-lg">{usuario.nombre} {usuario.apellido}</p>
-          {usuario.username && <p className="text-sm text-ink2">@{usuario.username}</p>}
+          <p className="font-medium text-lg" style={{ color: '#5C5C6E' }}>
+            {usuario.nombre} {usuario.apellido}
+          </p>
+          {usuario.username && (
+            <p className="text-sm" style={{ color: '#8A8A9A' }}>@{usuario.username}</p>
+          )}
           <div className="flex items-center gap-2 mt-1">
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-              usuario.tipo_usuario === 'registrado' ? 'bg-accent3/20 text-accent3' :
-              usuario.tipo_usuario === 'google'     ? 'bg-blue-100 text-blue-700' :
-              'bg-paper3 text-ink2'
-            }`}>
+            <span className="text-[10px] px-2 py-0.5 rounded-full font-sans"
+                  style={{
+                    background: usuario.tipo_usuario === 'registrado' ? '#D4E8D4' :
+                                usuario.tipo_usuario === 'google'     ? '#DBEAFE' : '#F4EDE4',
+                    color:      usuario.tipo_usuario === 'registrado' ? '#5a7f5a' :
+                                usuario.tipo_usuario === 'google'     ? '#1d4ed8' : '#8A8A9A',
+                  }}>
               {usuario.tipo_usuario === 'registrado' ? '✓ Cuenta completa'
                 : usuario.tipo_usuario === 'google' ? 'Google'
                 : 'Invitado'}
             </span>
-            <span className="text-xs text-ink2">{usuario.puntos} puntos</span>
+            <span className="text-xs font-sans" style={{ color: '#8A8A9A' }}>{usuario.puntos} puntos</span>
           </div>
         </div>
       </div>
 
       {/* Datos personales */}
-      <form onSubmit={handleGuardarPerfil} className="bg-white border border-paper3 rounded-xl p-5">
-        <h2 className="font-display text-lg font-normal mb-4 pb-3 border-b border-paper3">
+      <form onSubmit={handleGuardarPerfil} className="bg-white border border-borde rounded-xl p-5 shadow-cozy">
+        <h2 className="font-display text-lg mb-4 pb-3" style={{ borderBottom: '1px solid #EDE0D4', color: '#5C5C6E' }}>
           Datos personales
         </h2>
 
@@ -150,42 +180,73 @@ export function PerfilForm({ usuario, marcas, userEmail, tipoAuth }: Props) {
         </div>
 
         <div className="mb-3">
-          <label className="label">Nombre de usuario <span className="text-ink2 font-normal normal-case">(visible en el ranking)</span></label>
+          <label className="label">Nombre de usuario <span className="normal-case font-normal" style={{ color: '#8A8A9A' }}>(visible en el ranking)</span></label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink2 text-sm">@</span>
-            <input className="input pl-7" type="text"
-              value={username}
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: '#8A8A9A' }}>@</span>
+            <input className="input pl-7" type="text" value={username}
               onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))} />
           </div>
-          <p className="text-[10px] text-ink2 mt-1">Solo letras minúsculas, números, puntos y guiones bajos.</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+        {/* Red social con selector */}
+        <div className="mb-3">
+          <label className="label">Red social <span className="normal-case font-normal" style={{ color: '#8A8A9A' }}>(aparece en el ranking)</span></label>
+          <div className="grid grid-cols-[140px_1fr] gap-2">
+            <select className="input" value={redSocial} onChange={e => setRedSocial(e.target.value)}>
+              <option value="">Sin red social</option>
+              {REDES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </select>
+            <div className="relative">
+              {redSeleccionada && (
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-sans"
+                      style={{ color: '#8A8A9A' }}>@</span>
+              )}
+              <input
+                className="input"
+                style={{ paddingLeft: redSeleccionada ? '28px' : '12px' }}
+                type="text"
+                placeholder={redSeleccionada?.placeholder ?? 'Elegí una red primero'}
+                value={usuarioRed}
+                onChange={e => setUsuarioRed(e.target.value.replace(/^@/, ''))}
+                disabled={!redSocial}
+              />
+            </div>
+          </div>
+          {getSocialUrl() && (
+            <a href={getSocialUrl()!} target="_blank" rel="noopener noreferrer"
+               className="text-xs mt-1.5 block hover:underline"
+               style={{ color: '#C9908A' }}>
+              ↗ Ver perfil: {getSocialUrl()}
+            </a>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <div>
-            <label className="label">Red social <span className="text-ink2 font-normal normal-case">(aparece en el ranking)</span></label>
-            <input className="input" type="text" placeholder="@tu_usuario o URL"
-              value={social} onChange={e => setSocial(e.target.value)} />
+            <label className="label">Marca favorita</label>
+            <select className="input" value={marcaFav} onChange={e => setMarcaFav(e.target.value)}>
+              <option value="">Seleccionar...</option>
+              {marcas.map(m => <option key={m.id} value={m.nombre}>{m.nombre}</option>)}
+            </select>
           </div>
           <div>
             <label className="label">Fecha de nacimiento</label>
-            <input className="input" type="date"
-              value={fechaNac} onChange={e => setFechaNac(e.target.value)} />
+            <input className="input" type="date" value={fechaNac}
+              onChange={e => setFechaNac(e.target.value)} />
           </div>
         </div>
 
-        <div className="mb-4">
-          <label className="label">Marca favorita</label>
-          <select className="input" value={marcaFav} onChange={e => setMarcaFav(e.target.value)}>
-            <option value="">Seleccionar...</option>
-            {marcas.map(m => <option key={m.id} value={m.nombre}>{m.nombre}</option>)}
-          </select>
-        </div>
-
         {errorPerfil && (
-          <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{errorPerfil}</p>
+          <p className="text-xs font-sans rounded-lg px-3 py-2 mb-3"
+             style={{ background: '#F5E8E6', border: '1px solid #E8C4C0', color: '#C9908A' }}>
+            {errorPerfil}
+          </p>
         )}
         {okPerfil && (
-          <p className="text-xs text-accent3 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-3">✓ Perfil actualizado correctamente</p>
+          <p className="text-xs font-sans rounded-lg px-3 py-2 mb-3"
+             style={{ background: '#D4E8D4', border: '1px solid #b8d4b8', color: '#5a7f5a' }}>
+            ✓ Perfil actualizado correctamente
+          </p>
         )}
 
         <button type="submit" disabled={loadingPerfil} className="btn-primary w-full py-3 rounded-xl">
@@ -193,13 +254,12 @@ export function PerfilForm({ usuario, marcas, userEmail, tipoAuth }: Props) {
         </button>
       </form>
 
-      {/* Cambiar contraseña — solo para usuarios con email/contraseña */}
+      {/* Cambiar contraseña */}
       {!esGoogle && (
-        <form onSubmit={handleCambiarPassword} className="bg-white border border-paper3 rounded-xl p-5">
-          <h2 className="font-display text-lg font-normal mb-4 pb-3 border-b border-paper3">
+        <form onSubmit={handleCambiarPassword} className="bg-white border border-borde rounded-xl p-5 shadow-cozy">
+          <h2 className="font-display text-lg mb-4 pb-3" style={{ borderBottom: '1px solid #EDE0D4', color: '#5C5C6E' }}>
             Cambiar contraseña
           </h2>
-
           <div className="space-y-3 mb-4">
             <div>
               <label className="label">Contraseña actual *</label>
@@ -208,7 +268,7 @@ export function PerfilForm({ usuario, marcas, userEmail, tipoAuth }: Props) {
                 autoComplete="current-password" required />
             </div>
             <div>
-              <label className="label">Nueva contraseña * <span className="text-ink2 font-normal normal-case">(mínimo 8 caracteres)</span></label>
+              <label className="label">Nueva contraseña * <span className="normal-case font-normal" style={{ color: '#8A8A9A' }}>(mínimo 8 caracteres)</span></label>
               <input className="input" type="password" placeholder="••••••••"
                 value={passNueva} onChange={e => setPassNueva(e.target.value)}
                 autoComplete="new-password" minLength={8} required />
@@ -220,14 +280,18 @@ export function PerfilForm({ usuario, marcas, userEmail, tipoAuth }: Props) {
                 autoComplete="new-password" required />
             </div>
           </div>
-
           {errorPass && (
-            <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{errorPass}</p>
+            <p className="text-xs font-sans rounded-lg px-3 py-2 mb-3"
+               style={{ background: '#F5E8E6', border: '1px solid #E8C4C0', color: '#C9908A' }}>
+              {errorPass}
+            </p>
           )}
           {okPass && (
-            <p className="text-xs text-accent3 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-3">✓ Contraseña actualizada correctamente</p>
+            <p className="text-xs font-sans rounded-lg px-3 py-2 mb-3"
+               style={{ background: '#D4E8D4', border: '1px solid #b8d4b8', color: '#5a7f5a' }}>
+              ✓ Contraseña actualizada correctamente
+            </p>
           )}
-
           <button type="submit" disabled={loadingPass} className="btn-primary w-full py-3 rounded-xl">
             {loadingPass ? 'Cambiando...' : 'Cambiar contraseña'}
           </button>
@@ -235,7 +299,8 @@ export function PerfilForm({ usuario, marcas, userEmail, tipoAuth }: Props) {
       )}
 
       {esGoogle && (
-        <div className="bg-paper2 border border-paper3 rounded-xl p-4 text-sm text-ink2 flex items-center gap-3">
+        <div className="rounded-xl p-4 text-sm font-sans flex items-center gap-3"
+             style={{ background: '#F4EDE4', border: '1px solid rgba(92,92,110,0.15)', color: '#8A8A9A' }}>
           <span className="text-xl">ℹ️</span>
           <p>Tu cuenta está vinculada a Google. Para cambiar tu contraseña hacelo desde tu cuenta de Google.</p>
         </div>
