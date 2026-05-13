@@ -1,28 +1,23 @@
 import type { Metadata } from 'next'
-import { DM_Sans, Fraunces } from 'next/font/google'
 import './globals.css'
 
-const dmSans = DM_Sans({
-  subsets: ['latin'],
-  variable: '--font-sans',
-  display: 'swap',
-})
-
-const fraunces = Fraunces({
-  subsets: ['latin'],
-  variable: '--font-display',
-  display: 'swap',
-})
-
 export const metadata: Metadata = {
-  title: 'PaletNum — Equivalencias de marcadores para pintura por números',
+  title: 'PaletNum — Código de colores para pintar por números',
   description: 'Encontrá los códigos exactos de tus marcadores para cada dibujo. Comunidad colaborativa de pintura por números.',
   keywords: ['pintura por números', 'marcadores', 'equivalencias', 'Guangna', 'Copic', 'Posca'],
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${dmSans.variable} ${fraunces.variable}`}>
+    <html lang="es">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&family=Dancing+Script:wght@400;600&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="bg-paper text-ink font-sans min-h-screen flex flex-col">
         <div className="flex-1">
           {children}
