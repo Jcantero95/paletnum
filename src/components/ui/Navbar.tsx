@@ -26,16 +26,21 @@ export function Navbar({ usuario, stats, pendientes = 0, userEmail }: NavbarProp
 
   return (
     <>
-      <header style={{ background: '#5C5C6E' }} className="px-5 py-4 flex items-center justify-between">
-        <div>
-          <Link href="/buscar" className="font-display text-2xl tracking-tight"
-                style={{ color: '#FAF6F1' }}>
-            Palet<span style={{ color: '#E8C4C0', fontStyle: 'italic' }}>Num</span>
-          </Link>
-          <p className="font-script text-sm hidden sm:block mt-0.5"
-             style={{ color: 'rgba(250,246,241,0.5)', fontFamily: "'Dancing Script', cursive" }}>
-            Código de colores para pintar por números
-          </p>
+      <Link href="/buscar" className="font-display text-2xl tracking-tight"
+      style={{ color: '#FAF6F1' }}>
+  Palet<span style={{ color: '#E8C4C0', fontStyle: 'italic' }}>Num</span>
+</Link>
+<div className="hidden sm:flex items-center gap-2 mt-0.5">
+  <p className="font-script text-sm"
+     style={{ color: 'rgba(250,246,241,0.5)', fontFamily: "'Dancing Script', cursive" }}>
+    Código de colores para pintar por números
+  </p>
+  <span style={{ color: 'rgba(250,246,241,0.25)' }} className="text-xs">·</span>
+  <p className="font-script text-sm"
+     style={{ color: '#E8C4C0', fontFamily: "'Dancing Script', cursive", opacity: 0.7 }}>
+    by La chica de los hobbies
+  </p>
+</div>
         </div>
 
         <div className="flex items-center gap-3">
