@@ -9,26 +9,21 @@ import type { Submission, SubmissionModelo } from '@/types'
 function MarcasChips({ modelos }: { modelos: SubmissionModelo[] }) {
   if (!modelos || modelos.length === 0) return null
 
-  const sorted  = [...modelos].sort((a, b) => a.orden - b.orden)
+  const sorted   = [...modelos].sort((a, b) => a.orden - b.orden)
   const visibles = sorted.slice(0, 2)
   const extras   = sorted.length - 2
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
       {visibles.map(sm => (
-        <span
-          key={sm.id}
-          className="text-[10px] font-sans px-2 py-0.5 rounded-full"
-          style={{ background: '#F5E8E6', color: '#C9908A', border: '1px solid #E8C4C0' }}
-        >
+        <span key={sm.id} className="text-[10px] font-sans px-2 py-0.5 rounded-full"
+              style={{ background: '#F5E8E6', color: '#C9908A', border: '1px solid #E8C4C0' }}>
           {sm.modelo?.marca?.nombre} {sm.modelo?.nombre}
         </span>
       ))}
       {extras > 0 && (
-        <span
-          className="text-[10px] font-sans px-2 py-0.5 rounded-full"
-          style={{ background: '#F0EAE0', color: '#B59E7D', border: '1px solid #D9CBBA' }}
-        >
+        <span className="text-[10px] font-sans px-2 py-0.5 rounded-full"
+              style={{ background: '#F0EAE0', color: '#B59E7D', border: '1px solid #D9CBBA' }}>
           +{extras}
         </span>
       )}
@@ -100,17 +95,14 @@ export function SubmissionCard({ submission, likedByMe, onSelect, isSelected }: 
 
       {/* Body */}
       <div className="p-3.5 flex flex-col gap-2">
-
         {/* Usuario */}
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center
-                          text-white text-sm font-display flex-shrink-0"
+          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-display flex-shrink-0"
                style={{ background: '#C9908A' }}>
             {submission.usuario?.nombre?.charAt(0) ?? '?'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-sans font-medium text-sm leading-tight truncate"
-               style={{ color: '#5C5C6E' }}>
+            <p className="font-sans font-medium text-sm leading-tight truncate" style={{ color: '#5C5C6E' }}>
               {submission.usuario?.nombre}
             </p>
             <p className="text-[11px] truncate font-sans" style={{ color: '#8A8A9A' }}>
@@ -119,37 +111,41 @@ export function SubmissionCard({ submission, likedByMe, onSelect, isSelected }: 
           </div>
         </div>
 
-        {/* Marcas — pills con máx 2 visibles */}
+        {/* Marcas */}
         <MarcasChips modelos={modelos} />
 
         {/* Descripción */}
         {submission.descripcion && (
-          <p className="text-xs leading-relaxed line-clamp-2 font-sans italic"
-             style={{ color: '#8A8A9A' }}>
+          <p className="text-xs leading-relaxed line-clamp-2 font-sans italic" style={{ color: '#8A8A9A' }}>
             "{submission.descripcion}"
           </p>
         )}
 
         {/* Paleta de colores */}
-        <div className="flex items-center gap-1 flex-wrap">
-          {palette.slice(0, 8).map(c => (
-            <div
-              key={c.id}
-              title={c.nombre_color}
-              style={{ background: c.hex ?? '#ccc', border: '1px solid rgba(0,0,0,0.05)' }}
-              className="w-5 h-5 rounded-md flex-shrink-0"
-            />
-          ))}
-          {palette.length > 8 && (
-            <span className="text-[11px] ml-0.5 font-sans" style={{ color: '#8A8A9A' }}>
-              +{palette.length - 8}
-            </span>
-          )}
-        </div>
+        {palette.length > 0 && (
+          <div className="flex items-center gap-1 flex-wrap">
+            {palette.slice(0, 8).map(c => (
+              <div key={c.id} title={c.nombre_color}
+                   style={{ background: c.hex ?? '#ccc', border: '1px solid rgba(0,0,0,0.05)' }}
+                   className="w-5 h-5 rounded-md flex-shrink-0" />
+            ))}
+            {palette.length > 8 && (
+              <span className="text-[11px] ml-0.5 font-sans" style={{ color: '#8A8A9A' }}>
+                +{palette.length - 8}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Indicador de foto de registro si no hay colores */}
+        {palette.length === 0 && submission.registro_url && (
+          <p className="text-[11px] font-sans" style={{ color: '#B59E7D' }}>
+            📋 Registro fotográfico disponible
+          </p>
+        )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-1.5"
-             style={{ borderTop: '1px solid #EDE0D4' }}>
+        <div className="flex items-center justify-between pt-1.5" style={{ borderTop: '1px solid #EDE0D4' }}>
           <button
             onClick={handleLike}
             disabled={loading}
@@ -178,8 +174,10 @@ interface ColorPanelProps {
 
 export function ColorPanel({ submission, onClose }: ColorPanelProps) {
   const [copied, setCopied] = useState(false)
-  const palette  = submission.submission_colores ?? []
-  const modelos  = submission.modelos ?? []
+  const palette      = submission.submission_colores ?? []
+  const modelos      = submission.modelos ?? []
+  const tieneColores = palette.length > 0
+  const tieneFotoReg = !!submission.registro_url
 
   async function copyList() {
     const marcasStr = modelos
@@ -221,87 +219,119 @@ export function ColorPanel({ submission, onClose }: ColorPanelProps) {
             <MarcasChips modelos={modelos} />
           </div>
           <p className="text-xs font-sans mt-1" style={{ color: '#8A8A9A' }}>
-            {palette.length} colores
+            {tieneColores && `${palette.length} colores`}
+            {tieneColores && tieneFotoReg && ' · '}
+            {tieneFotoReg && 'Registro fotográfico'}
           </p>
         </div>
         <button
           onClick={onClose}
-          className="text-xs font-sans px-3 py-1.5 rounded-xl transition-colors ml-3"
+          className="text-xs font-sans px-3 py-1.5 rounded-xl transition-colors ml-3 flex-shrink-0"
           style={{ background: '#F4EDE4', color: '#8A8A9A', border: '1px solid rgba(92,92,110,0.15)' }}
         >
           Cerrar
         </button>
       </div>
 
-      {/* Tabla */}
-      <div className="overflow-x-auto -mx-1">
-        <table className="w-full text-sm min-w-[300px]">
-          <thead>
-            <tr className="text-[10px] uppercase tracking-wider font-sans"
-                style={{ color: '#8A8A9A', borderBottom: '1px solid #EDE0D4' }}>
-              <th className="text-left pb-2 font-normal pl-1">Color</th>
-              <th className="text-center pb-2 font-normal w-12">N°</th>
-              <th className="text-left pb-2 font-normal">Código</th>
-              {modelos.length > 1 && (
-                <th className="text-left pb-2 font-normal">Marca</th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {palette.map(c => {
-              const marcaColor = c.modelo_id
-                ? modelos.find(sm => sm.modelo_id === c.modelo_id)?.modelo?.marca?.nombre
-                : null
+      {/* Foto del registro */}
+      {tieneFotoReg && (
+        <div className={tieneColores ? 'mb-5' : ''}>
+          <p className="text-xs uppercase tracking-wider font-sans mb-2" style={{ color: '#8A8A9A' }}>
+            Registro escrito
+          </p>
+          <img
+            src={submission.registro_url!}
+            alt="Registro de colores"
+            className="w-full rounded-xl object-contain max-h-72"
+            style={{ border: '1px solid rgba(92,92,110,0.1)' }}
+          />
+        </div>
+      )}
 
-              return (
-                <tr key={c.id} style={{ borderBottom: '1px solid rgba(237,224,212,0.6)' }}
-                    className="hover:bg-crema2">
-                  <td className="py-2 pr-2 pl-1">
-                    <div className="flex items-center gap-2">
-                      <div style={{ background: c.hex ?? '#ccc', border: '1px solid rgba(0,0,0,0.06)' }}
-                           className="w-6 h-6 rounded-md flex-shrink-0" />
-                      <span className="font-sans text-xs" style={{ color: '#5C5C6E' }}>
-                        {c.nombre_color}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-2 text-center text-xs font-sans" style={{ color: '#8A8A9A' }}>
-                    {String(c.numero_libro).padStart(2, '0')}
-                  </td>
-                  <td className="py-2">
-                    <span className="text-xs font-sans px-2 py-0.5 rounded-md"
-                          style={{ background: '#F5E8E6', color: '#C9908A', border: '1px solid #E8C4C0' }}>
-                      {c.codigo_marcador}
-                    </span>
-                  </td>
-                  {modelos.length > 1 && (
-                    <td className="py-2">
-                      {marcaColor && (
-                        <span className="text-[10px] font-sans px-2 py-0.5 rounded-full"
-                              style={{ background: '#F0EAE0', color: '#B59E7D', border: '1px solid #D9CBBA' }}>
-                          {marcaColor}
-                        </span>
-                      )}
-                    </td>
-                  )}
+      {/* Tabla de colores */}
+      {tieneColores && (
+        <>
+          {tieneFotoReg && (
+            <p className="text-xs uppercase tracking-wider font-sans mb-2" style={{ color: '#8A8A9A' }}>
+              Colores cargados
+            </p>
+          )}
+          <div className="overflow-x-auto -mx-1">
+            <table className="w-full text-sm min-w-[300px]">
+              <thead>
+                <tr className="text-[10px] uppercase tracking-wider font-sans"
+                    style={{ color: '#8A8A9A', borderBottom: '1px solid #EDE0D4' }}>
+                  <th className="text-left pb-2 font-normal pl-1">Color</th>
+                  <th className="text-center pb-2 font-normal w-12">N°</th>
+                  <th className="text-left pb-2 font-normal">Código</th>
+                  {modelos.length > 1 && <th className="text-left pb-2 font-normal">Marca</th>}
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {palette.map(c => {
+                  const marcaColor = c.modelo_id
+                    ? modelos.find(sm => sm.modelo_id === c.modelo_id)?.modelo?.marca?.nombre
+                    : null
+                  return (
+                    <tr key={c.id} style={{ borderBottom: '1px solid rgba(237,224,212,0.6)' }}
+                        className="hover:bg-crema2">
+                      <td className="py-2 pr-2 pl-1">
+                        <div className="flex items-center gap-2">
+                          <div style={{ background: c.hex ?? '#ccc', border: '1px solid rgba(0,0,0,0.06)' }}
+                               className="w-6 h-6 rounded-md flex-shrink-0" />
+                          <span className="font-sans text-xs" style={{ color: '#5C5C6E' }}>
+                            {c.nombre_color}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-2 text-center text-xs font-sans" style={{ color: '#8A8A9A' }}>
+                        {String(c.numero_libro).padStart(2, '0')}
+                      </td>
+                      <td className="py-2">
+                        <span className="text-xs font-sans px-2 py-0.5 rounded-md"
+                              style={{ background: '#F5E8E6', color: '#C9908A', border: '1px solid #E8C4C0' }}>
+                          {c.codigo_marcador}
+                        </span>
+                      </td>
+                      {modelos.length > 1 && (
+                        <td className="py-2">
+                          {marcaColor && (
+                            <span className="text-[10px] font-sans px-2 py-0.5 rounded-full"
+                                  style={{ background: '#F0EAE0', color: '#B59E7D', border: '1px solid #D9CBBA' }}>
+                              {marcaColor}
+                            </span>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {/* Sin contenido */}
+      {!tieneColores && !tieneFotoReg && (
+        <div className="text-center py-6" style={{ color: '#8A8A9A' }}>
+          <p className="font-sans text-sm">Este resultado no tiene colores cargados.</p>
+        </div>
+      )}
 
       {/* Botón copiar */}
-      <button
-        onClick={copyList}
-        className="w-full mt-4 py-3 rounded-xl text-sm font-sans font-medium transition-all"
-        style={copied
-          ? { background: '#8FAF8F', color: 'white' }
-          : { background: '#5C5C6E', color: '#FAF6F1' }
-        }
-      >
-        {copied ? '✓ Lista copiada' : '📋 Copiar lista completa'}
-      </button>
+      {tieneColores && (
+        <button
+          onClick={copyList}
+          className="w-full mt-4 py-3 rounded-xl text-sm font-sans font-medium transition-all"
+          style={copied
+            ? { background: '#8FAF8F', color: 'white' }
+            : { background: '#5C5C6E', color: '#FAF6F1' }
+          }
+        >
+          {copied ? '✓ Lista copiada' : '📋 Copiar lista completa'}
+        </button>
+      )}
     </div>
   )
 }
