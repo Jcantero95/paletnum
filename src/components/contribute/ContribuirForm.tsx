@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import { createSubmission } from '@/lib/actions'
 import type { Libro, Marca, Modelo } from '@/types'
 
@@ -28,6 +29,7 @@ interface Props {
 
 export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
   const router      = useRouter()
+  const supabase    = createClient()
   const fotoRef     = useRef<HTMLInputElement>(null)
   const registroRef = useRef<HTMLInputElement>(null)
 
@@ -41,6 +43,8 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
     { marca_id: '', modelo_id: '' }
   ])
 
+  const [fotoFile,        setFotoFile]        = useState<File | null>(null)
+  const [registroFile,    setRegistroFile]    = useState<File | null>(null)
   const [fotoPreview,     setFotoPreview]     = useState<string | null>(null)
   const [registroPreview, setRegistroPreview] = useState<string | null>(null)
 
@@ -76,21 +80,31 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
               else resolve(file)
             },
             'image/jpeg',
-            0.85
+            0.82
           )
         }
       }
     })
   }
 
+  // ---- Upload directo a Supabase Storage desde el cliente ----
+  async function uploadFoto(file: File, tipo: 'foto' | 'registro', userId: string): Promise<string> {
+    const ext  = 'jpg'
+    const path = `${userId}/${tipo}_${Date.now()}.${ext}`
+    const { error } = await supabase.storage
+      .from('submissions-fotos')
+      .upload(path, file, { upsert: false, contentType: 'image/jpeg' })
+    if (error) throw new Error(`Error subiendo ${tipo}: ${error.message}`)
+    const { data } = supabase.storage.from('submissions-fotos').getPublicUrl(path)
+    return data.publicUrl
+  }
+
   async function handleFoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) {
       const comprimida = await comprimirImagen(file)
+      setFotoFile(comprimida)
       setFotoPreview(URL.createObjectURL(comprimida))
-      const dt = new DataTransfer()
-      dt.items.add(comprimida)
-      if (fotoRef.current) fotoRef.current.files = dt.files
     }
   }
 
@@ -98,20 +112,18 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
     const file = e.target.files?.[0]
     if (file) {
       const comprimida = await comprimirImagen(file)
+      setRegistroFile(comprimida)
       setRegistroPreview(URL.createObjectURL(comprimida))
-      const dt = new DataTransfer()
-      dt.items.add(comprimida)
-      if (registroRef.current) registroRef.current.files = dt.files
     }
   }
 
   function limpiarFoto() {
-    setFotoPreview(null)
+    setFotoFile(null); setFotoPreview(null)
     if (fotoRef.current) fotoRef.current.value = ''
   }
 
   function limpiarRegistro() {
-    setRegistroPreview(null)
+    setRegistroFile(null); setRegistroPreview(null)
     if (registroRef.current) registroRef.current.value = ''
   }
 
@@ -153,18 +165,31 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
         setError('Agregá al menos un color con número y código.'); return
       }
     } else {
-      if (!registroRef.current?.files?.[0]) { setError('Subí la foto de tu registro escrito.'); return }
+      if (!registroFile) { setError('Subí la foto de tu registro escrito.'); return }
     }
+
     setSubmitting(true)
     try {
+      // Obtener usuario actual
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('No autenticado')
+
+      // Upload fotos directamente desde el cliente
+      let foto_url:     string | null = null
+      let registro_url: string | null = null
+      if (fotoFile)     foto_url     = await uploadFoto(fotoFile,     'foto',     user.id)
+      if (registroFile) registro_url = await uploadFoto(registroFile, 'registro', user.id)
+
+      // Enviar al server action solo los datos (sin archivos)
       const fd = new FormData()
-      fd.append('libro_id',    libroId)
-      fd.append('pagina',      pagina)
-      fd.append('modelo_id',   modelosValidos[0].modelo_id)
-      fd.append('descripcion', desc)
-      fd.append('modelos',     JSON.stringify(modelosValidos))
-      if (fotoRef.current?.files?.[0])     fd.append('foto',     fotoRef.current.files[0])
-      if (registroRef.current?.files?.[0]) fd.append('registro', registroRef.current.files[0])
+      fd.append('libro_id',     libroId)
+      fd.append('pagina',       pagina)
+      fd.append('modelo_id',    modelosValidos[0].modelo_id)
+      fd.append('descripcion',  desc)
+      fd.append('modelos',      JSON.stringify(modelosValidos))
+      if (foto_url)     fd.append('foto_url',     foto_url)
+      if (registro_url) fd.append('registro_url', registro_url)
+
       const coloresFinales = modo === 'manual'
         ? colores.filter(c => c.numero_libro && c.codigo_marcador).map((c, i) => ({
             numero_libro:    parseInt(c.numero_libro),
@@ -176,6 +201,7 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
           }))
         : []
       fd.append('colores', JSON.stringify(coloresFinales))
+
       await createSubmission(fd)
       setPublicado(true)
     } catch (err) {
@@ -210,7 +236,8 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
             onClick={() => {
               setPublicado(false)
               setLibroId(''); setPagina(''); setDesc('')
-              setFotoPreview(null); setRegistroPreview(null)
+              setFotoFile(null); setFotoPreview(null)
+              setRegistroFile(null); setRegistroPreview(null)
               setColores([{ numero_libro: '', nombre_color: '', hex: '#E8C4C0', codigo_marcador: '', modelo_idx: 0 }])
               setModelosSeleccionados([{ marca_id: '', modelo_id: '' }])
             }}
@@ -300,12 +327,9 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
           {fotoPreview ? (
             <div className="relative">
               <img src={fotoPreview} alt="preview" className="w-full max-h-52 object-cover rounded-2xl" />
-              <button
-                type="button"
-                onClick={limpiarFoto}
+              <button type="button" onClick={limpiarFoto}
                 className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-md"
-                style={{ background: 'rgba(0,0,0,0.6)', color: 'white' }}
-              >
+                style={{ background: 'rgba(0,0,0,0.6)', color: 'white' }}>
                 ×
               </button>
             </div>
@@ -385,12 +409,9 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
             {registroPreview ? (
               <div className="relative">
                 <img src={registroPreview} alt="registro" className="w-full max-h-52 object-cover rounded-2xl" />
-                <button
-                  type="button"
-                  onClick={limpiarRegistro}
+                <button type="button" onClick={limpiarRegistro}
                   className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-md"
-                  style={{ background: 'rgba(0,0,0,0.6)', color: 'white' }}
-                >
+                  style={{ background: 'rgba(0,0,0,0.6)', color: 'white' }}>
                   ×
                 </button>
               </div>
@@ -404,7 +425,8 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
               </div>
             )}
             <input ref={registroRef} type="file" accept="image/*" className="hidden" onChange={handleRegistro} />
-            <div className="mt-3 rounded-xl px-4 py-3 text-xs font-sans" style={{ background: '#F4EDE4', color: '#8A8A9A' }}>
+            <div className="mt-3 rounded-xl px-4 py-3 text-xs font-sans"
+                 style={{ background: '#F4EDE4', color: '#8A8A9A' }}>
               💡 En una próxima versión extraeremos los colores automáticamente de tu foto.
             </div>
           </div>
