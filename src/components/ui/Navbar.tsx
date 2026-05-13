@@ -28,21 +28,26 @@ export function Navbar({ usuario, stats, pendientes = 0, userEmail }: NavbarProp
     <>
       <header style={{ background: '#5C5C6E' }} className="px-5 py-4 flex items-center justify-between">
         <div>
-          <Link href="/buscar" className="font-display text-2xl tracking-tight"
-                style={{ color: '#FAF6F1' }}>
-            Palet<span style={{ color: '#E8C4C0', fontStyle: 'italic' }}>Num</span>
-          </Link>
-          <div className="hidden sm:flex items-center gap-2 mt-0.5">
-            <p className="font-script text-sm"
-               style={{ color: 'rgba(250,246,241,0.5)', fontFamily: "'Dancing Script', cursive" }}>
-              Código de colores para pintar por números
-            </p>
-            <span className="text-xs" style={{ color: 'rgba(250,246,241,0.25)' }}>·</span>
-            <p className="font-script text-sm"
-               style={{ color: '#E8C4C0', fontFamily: "'Dancing Script', cursive", opacity: 0.7 }}>
+          <div>
+            <Link href="/buscar" className="font-display text-2xl tracking-tight"
+                  style={{ color: '#FAF6F1' }}>
+              Palet<span style={{ color: '#E8C4C0', fontStyle: 'italic' }}>Num</span>
+            </Link>
+            <p style={{
+              fontFamily: "'Dancing Script', cursive",
+              fontSize: '12px',
+              color: '#E8C4C0',
+              opacity: 0.75,
+              marginTop: '-2px',
+              letterSpacing: '0.2px'
+            }}>
               by La chica de los hobbies
             </p>
           </div>
+          <p className="hidden sm:block font-script text-sm mt-0.5"
+             style={{ color: 'rgba(250,246,241,0.5)', fontFamily: "'Dancing Script', cursive" }}>
+            Código de colores para pintar por números
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
