@@ -28,23 +28,21 @@ export function Navbar({ usuario, stats, pendientes = 0, userEmail }: NavbarProp
     <>
       <header style={{ background: '#5C5C6E' }} className="px-5 py-4 flex items-center justify-between">
         <div>
-          <div>
+          <div className="flex items-baseline gap-2">
             <Link href="/buscar" className="font-display text-2xl tracking-tight"
                   style={{ color: '#FAF6F1' }}>
               Palet<span style={{ color: '#E8C4C0', fontStyle: 'italic' }}>Num</span>
             </Link>
-            <p style={{
+            <span style={{
               fontFamily: "'Dancing Script', cursive",
-              fontSize: '12px',
+              fontSize: '14px',
               color: '#E8C4C0',
               opacity: 0.75,
-              marginTop: '-2px',
-              letterSpacing: '0.2px'
             }}>
               by La chica de los hobbies
-            </p>
+            </span>
           </div>
-          <p className="hidden sm:block font-script text-sm mt-0.5"
+          <p className="hidden sm:block text-sm mt-0.5"
              style={{ color: 'rgba(250,246,241,0.5)', fontFamily: "'Dancing Script', cursive" }}>
             Código de colores para pintar por números
           </p>
