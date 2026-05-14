@@ -114,3 +114,112 @@ export async function updatePerfil(formData: FormData) {
   if (error) throw error
   revalidatePath('/ranking')
 }
+
+// ------------------------------------------------------------
+// Submissions — editar y eliminar
+// ------------------------------------------------------------
+
+export async function deleteSubmission(submission_id: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
+  // Verificar que el post pertenece al usuario
+  const { data: submission } = await supabase
+    .from('submissions').select('usuario_id, foto_url, registro_url')
+    .eq('id', submission_id).single()
+
+  if (!submission || submission.usuario_id !== user.id) {
+    throw new Error('No autorizado')
+  }
+
+  // Eliminar fotos del storage
+  const paths: string[] = []
+  if (submission.foto_url) {
+    const path = submission.foto_url.split('/submissions-fotos/')[1]
+    if (path) paths.push(path)
+  }
+  if (submission.registro_url) {
+    const path = submission.registro_url.split('/submissions-fotos/')[1]
+    if (path) paths.push(path)
+  }
+  if (paths.length > 0) {
+    await supabase.storage.from('submissions-fotos').remove(paths)
+  }
+
+  const { error } = await supabase
+    .from('submissions').delete().eq('id', submission_id)
+  if (error) throw error
+
+  revalidatePath('/inicio')
+  revalidatePath('/buscar')
+}
+
+export async function updateSubmission(submission_id: string, formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
+  const { data: submission } = await supabase
+    .from('submissions').select('usuario_id')
+    .eq('id', submission_id).single()
+
+  if (!submission || submission.usuario_id !== user.id) {
+    throw new Error('No autorizado')
+  }
+
+  const foto_url     = (formData.get('foto_url')     as string) || null
+  const registro_url = (formData.get('registro_url') as string) || null
+  const descripcion  = (formData.get('descripcion')  as string) || null
+
+  // Actualizar submission
+  const updateData: any = { descripcion }
+  if (foto_url)     updateData.foto_url     = foto_url
+  if (registro_url) updateData.registro_url = registro_url
+
+  const { error } = await supabase
+    .from('submissions').update(updateData).eq('id', submission_id)
+  if (error) throw error
+
+  // Actualizar colores si se enviaron
+  const coloresRaw = formData.get('colores') as string
+  if (coloresRaw) {
+    const colores = JSON.parse(coloresRaw)
+
+    // Eliminar colores existentes y reinsertar
+    await supabase.from('submission_colores').delete().eq('submission_id', submission_id)
+
+    if (colores.length > 0) {
+      await supabase.from('submission_colores').insert(
+        colores.map((c: any) => ({
+          submission_id,
+          numero_libro:    c.numero_libro,
+          nombre_color:    c.nombre_color,
+          hex:             c.hex || null,
+          codigo_marcador: c.codigo_marcador,
+          modelo_id:       c.modelo_id || null,
+          orden:           c.orden,
+        }))
+      )
+    }
+  }
+
+  // Actualizar modelos si se enviaron
+  const modelosRaw = formData.get('modelos') as string
+  if (modelosRaw) {
+    const modelos = JSON.parse(modelosRaw)
+    await supabase.from('submission_modelos').delete().eq('submission_id', submission_id)
+    if (modelos.length > 0) {
+      await supabase.from('submission_modelos').insert(
+        modelos.map((m: any, i: number) => ({
+          submission_id,
+          modelo_id: m.modelo_id,
+          orden:     i,
+        }))
+      )
+    }
+  }
+
+  revalidatePath('/inicio')
+  revalidatePath('/buscar')
+}

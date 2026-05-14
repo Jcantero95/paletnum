@@ -19,6 +19,7 @@ export function Navbar({ usuario, stats, pendientes = 0, userEmail }: NavbarProp
   const esAdmin = userEmail === ADMIN_EMAIL
 
   const links = [
+    { href: '/inicio',     label: 'Inicio',  icon: '🏠' },
     { href: '/buscar',     label: 'Buscar',  icon: '🔍' },
     { href: '/contribuir', label: 'Subir',   icon: '🖼️' },
     { href: '/ranking',    label: 'Ranking', icon: '🏆' },
