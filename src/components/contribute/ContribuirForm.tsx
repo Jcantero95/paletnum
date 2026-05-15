@@ -28,10 +28,12 @@ interface Props {
 }
 
 export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
-  const router      = useRouter()
-  const supabase    = createClient()
-  const fotoRef     = useRef<HTMLInputElement>(null)
-  const registroRef = useRef<HTMLInputElement>(null)
+  const router            = useRouter()
+  const supabase          = createClient()
+  const fotoRef           = useRef<HTMLInputElement>(null)
+  const camaraRef         = useRef<HTMLInputElement>(null)
+  const registroRef       = useRef<HTMLInputElement>(null)
+  const camaraRegistroRef = useRef<HTMLInputElement>(null)
 
   const [modo,      setModo]      = useState<Modo>('manual')
   const [libroId,   setLibroId]   = useState('')
@@ -54,7 +56,6 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [error,      setError]      = useState<string | null>(null)
 
-  // ---- Comprimir imagen ----
   async function comprimirImagen(file: File): Promise<File> {
     return new Promise((resolve) => {
       const reader = new FileReader()
@@ -70,41 +71,33 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
             if (width > height) { height = (height * maxDim) / width; width = maxDim }
             else { width = (width * maxDim) / height; height = maxDim }
           }
-          canvas.width = width
-          canvas.height = height
-          const ctx = canvas.getContext('2d')!
-          ctx.drawImage(img, 0, 0, width, height)
+          canvas.width = width; canvas.height = height
+          canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
           canvas.toBlob(
             (blob) => {
               if (blob) resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
               else resolve(file)
             },
-            'image/jpeg',
-            0.82
+            'image/jpeg', 0.82
           )
         }
       }
     })
   }
 
-  // ---- Upload directo a Supabase Storage desde el cliente ----
   async function uploadFoto(file: File, tipo: 'foto' | 'registro', userId: string): Promise<string> {
-    const ext  = 'jpg'
-    const path = `${userId}/${tipo}_${Date.now()}.${ext}`
+    const path = `${userId}/${tipo}_${Date.now()}.jpg`
     const { error } = await supabase.storage
-      .from('submissions-fotos')
-      .upload(path, file, { upsert: false, contentType: 'image/jpeg' })
-    if (error) throw new Error(`Error subiendo ${tipo}: ${error.message}`)
-    const { data } = supabase.storage.from('submissions-fotos').getPublicUrl(path)
-    return data.publicUrl
+      .from('submissions-fotos').upload(path, file, { upsert: false, contentType: 'image/jpeg' })
+    if (error) throw new Error(error.message)
+    return supabase.storage.from('submissions-fotos').getPublicUrl(path).data.publicUrl
   }
 
   async function handleFoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) {
       const comprimida = await comprimirImagen(file)
-      setFotoFile(comprimida)
-      setFotoPreview(URL.createObjectURL(comprimida))
+      setFotoFile(comprimida); setFotoPreview(URL.createObjectURL(comprimida))
     }
   }
 
@@ -112,19 +105,20 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
     const file = e.target.files?.[0]
     if (file) {
       const comprimida = await comprimirImagen(file)
-      setRegistroFile(comprimida)
-      setRegistroPreview(URL.createObjectURL(comprimida))
+      setRegistroFile(comprimida); setRegistroPreview(URL.createObjectURL(comprimida))
     }
   }
 
   function limpiarFoto() {
     setFotoFile(null); setFotoPreview(null)
-    if (fotoRef.current) fotoRef.current.value = ''
+    if (fotoRef.current)   fotoRef.current.value = ''
+    if (camaraRef.current) camaraRef.current.value = ''
   }
 
   function limpiarRegistro() {
     setRegistroFile(null); setRegistroPreview(null)
-    if (registroRef.current) registroRef.current.value = ''
+    if (registroRef.current)       registroRef.current.value = ''
+    if (camaraRegistroRef.current) camaraRegistroRef.current.value = ''
   }
 
   function updateModelo(idx: number, field: keyof ModeloSeleccionado, value: string) {
@@ -132,9 +126,7 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
       i === idx ? { ...m, [field]: value, ...(field === 'marca_id' ? { modelo_id: '' } : {}) } : m
     ))
   }
-  function addModelo() {
-    setModelosSeleccionados(prev => [...prev, { marca_id: '', modelo_id: '' }])
-  }
+  function addModelo() { setModelosSeleccionados(prev => [...prev, { marca_id: '', modelo_id: '' }]) }
   function removeModelo(idx: number) {
     if (modelosSeleccionados.length === 1) return
     setModelosSeleccionados(prev => prev.filter((_, i) => i !== idx))
@@ -147,9 +139,7 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
   function addColor() {
     setColores(p => [...p, { numero_libro: '', nombre_color: '', hex: '#E8C4C0', codigo_marcador: '', modelo_idx: 0 }])
   }
-  function removeColor(i: number) {
-    setColores(p => p.filter((_, idx) => idx !== i))
-  }
+  function removeColor(i: number) { setColores(p => p.filter((_, idx) => idx !== i)) }
   function updateColor(i: number, field: keyof ColorEntry, value: string | number) {
     setColores(p => p.map((c, idx) => idx === i ? { ...c, [field]: value } : c))
   }
@@ -167,26 +157,22 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
     } else {
       if (!registroFile) { setError('Subí la foto de tu registro escrito.'); return }
     }
-
     setSubmitting(true)
     try {
-      // Obtener usuario actual
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('No autenticado')
 
-      // Upload fotos directamente desde el cliente
       let foto_url:     string | null = null
       let registro_url: string | null = null
       if (fotoFile)     foto_url     = await uploadFoto(fotoFile,     'foto',     user.id)
       if (registroFile) registro_url = await uploadFoto(registroFile, 'registro', user.id)
 
-      // Enviar al server action solo los datos (sin archivos)
       const fd = new FormData()
-      fd.append('libro_id',     libroId)
-      fd.append('pagina',       pagina)
-      fd.append('modelo_id',    modelosValidos[0].modelo_id)
-      fd.append('descripcion',  desc)
-      fd.append('modelos',      JSON.stringify(modelosValidos))
+      fd.append('libro_id',    libroId)
+      fd.append('pagina',      pagina)
+      fd.append('modelo_id',   modelosValidos[0].modelo_id)
+      fd.append('descripcion', desc)
+      fd.append('modelos',     JSON.stringify(modelosValidos))
       if (foto_url)     fd.append('foto_url',     foto_url)
       if (registro_url) fd.append('registro_url', registro_url)
 
@@ -211,7 +197,6 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
     }
   }
 
-  // ---- Pantalla de éxito ----
   if (publicado) {
     return (
       <div className="bg-white border border-borde rounded-2xl p-8 text-center shadow-cozy">
@@ -226,23 +211,18 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
           La comunidad te lo agradece ✨
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <button
-            onClick={() => router.push('/buscar?libro_id=' + libroId + '&pagina=' + pagina)}
-            className="btn-primary px-6 py-3"
-          >
+          <button onClick={() => router.push('/buscar?libro_id=' + libroId + '&pagina=' + pagina)}
+            className="btn-primary px-6 py-3">
             Ver resultados →
           </button>
-          <button
-            onClick={() => {
-              setPublicado(false)
-              setLibroId(''); setPagina(''); setDesc('')
-              setFotoFile(null); setFotoPreview(null)
-              setRegistroFile(null); setRegistroPreview(null)
-              setColores([{ numero_libro: '', nombre_color: '', hex: '#E8C4C0', codigo_marcador: '', modelo_idx: 0 }])
-              setModelosSeleccionados([{ marca_id: '', modelo_id: '' }])
-            }}
-            className="btn-secondary px-6 py-3"
-          >
+          <button onClick={() => {
+            setPublicado(false)
+            setLibroId(''); setPagina(''); setDesc('')
+            setFotoFile(null); setFotoPreview(null)
+            setRegistroFile(null); setRegistroPreview(null)
+            setColores([{ numero_libro: '', nombre_color: '', hex: '#E8C4C0', codigo_marcador: '', modelo_idx: 0 }])
+            setModelosSeleccionados([{ marca_id: '', modelo_id: '' }])
+          }} className="btn-secondary px-6 py-3">
             Publicar otro resultado
           </button>
         </div>
@@ -334,15 +314,23 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
               </button>
             </div>
           ) : (
-            <div className="border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-colors"
-                 style={{ borderColor: '#EDE0D4', color: '#8A8A9A' }}
-                 onClick={() => fotoRef.current?.click()}>
-              <div className="text-3xl mb-2 opacity-40">📷</div>
-              <p className="font-sans text-sm font-medium">Tocá para subir o sacar foto</p>
-              <p className="font-sans text-xs mt-1 opacity-50">Se comprime automáticamente</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => fotoRef.current?.click()}
+                className="flex flex-col items-center justify-center gap-2 py-5 rounded-2xl border-2 border-dashed transition-colors"
+                style={{ borderColor: '#EDE0D4', color: '#8A8A9A' }}>
+                <span className="text-2xl">🖼️</span>
+                <span className="font-sans text-xs font-medium">Subir de galería</span>
+              </button>
+              <button type="button" onClick={() => camaraRef.current?.click()}
+                className="flex flex-col items-center justify-center gap-2 py-5 rounded-2xl border-2 border-dashed transition-colors"
+                style={{ borderColor: '#E8C4C0', color: '#C9908A' }}>
+                <span className="text-2xl">📷</span>
+                <span className="font-sans text-xs font-medium">Sacar foto</span>
+              </button>
             </div>
           )}
-          <input ref={fotoRef} type="file" accept="image/*" className="hidden" onChange={handleFoto} />
+          <input ref={fotoRef}    type="file" accept="image/*"                    className="hidden" onChange={handleFoto} />
+          <input ref={camaraRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFoto} />
         </div>
       </div>
 
@@ -416,15 +404,23 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
                 </button>
               </div>
             ) : (
-              <div className="border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-colors"
-                   style={{ borderColor: '#EDE0D4', color: '#8A8A9A' }}
-                   onClick={() => registroRef.current?.click()}>
-                <div className="text-4xl mb-3 opacity-40">📋</div>
-                <p className="font-sans font-medium text-sm mb-1">Foto de tu registro escrito</p>
-                <p className="font-sans text-xs opacity-60">Papel, cuaderno o anotación con tus equivalencias</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => registroRef.current?.click()}
+                  className="flex flex-col items-center justify-center gap-2 py-5 rounded-2xl border-2 border-dashed transition-colors"
+                  style={{ borderColor: '#EDE0D4', color: '#8A8A9A' }}>
+                  <span className="text-2xl">🖼️</span>
+                  <span className="font-sans text-xs font-medium">Subir de galería</span>
+                </button>
+                <button type="button" onClick={() => camaraRegistroRef.current?.click()}
+                  className="flex flex-col items-center justify-center gap-2 py-5 rounded-2xl border-2 border-dashed transition-colors"
+                  style={{ borderColor: '#E8C4C0', color: '#C9908A' }}>
+                  <span className="text-2xl">📷</span>
+                  <span className="font-sans text-xs font-medium">Sacar foto</span>
+                </button>
               </div>
             )}
-            <input ref={registroRef} type="file" accept="image/*" className="hidden" onChange={handleRegistro} />
+            <input ref={registroRef}       type="file" accept="image/*"                    className="hidden" onChange={handleRegistro} />
+            <input ref={camaraRegistroRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleRegistro} />
             <div className="mt-3 rounded-xl px-4 py-3 text-xs font-sans"
                  style={{ background: '#F4EDE4', color: '#8A8A9A' }}>
               💡 En una próxima versión extraeremos los colores automáticamente de tu foto.

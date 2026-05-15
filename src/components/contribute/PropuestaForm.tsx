@@ -10,11 +10,17 @@ interface Props {
   onClose: () => void
 }
 
+interface ModeloPropuesto {
+  nombre: string
+  cantidad: string
+}
+
 export function PropuestaForm({ tipo, onClose }: Props) {
   const [nombre,      setNombre]      = useState('')
   const [editorial,   setEditorial]   = useState('')
   const [paginas,     setPaginas]     = useState('')
   const [notas,       setNotas]       = useState('')
+  const [modelos,     setModelos]     = useState<ModeloPropuesto[]>([{ nombre: '', cantidad: '' }])
   const [duplicados,  setDuplicados]  = useState<any[]>([])
   const [confirmando, setConfirmando] = useState(false)
   const [enviado,     setEnviado]     = useState(false)
@@ -29,6 +35,17 @@ export function PropuestaForm({ tipo, onClose }: Props) {
     setDuplicados(dupes)
   }
 
+  function addModelo() {
+    setModelos(p => [...p, { nombre: '', cantidad: '' }])
+  }
+  function removeModelo(i: number) {
+    if (modelos.length === 1) return
+    setModelos(p => p.filter((_, idx) => idx !== i))
+  }
+  function updateModelo(i: number, field: keyof ModeloPropuesto, value: string) {
+    setModelos(p => p.map((m, idx) => idx === i ? { ...m, [field]: value } : m))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -36,6 +53,16 @@ export function PropuestaForm({ tipo, onClose }: Props) {
       setConfirmando(true)
       return
     }
+
+    // Validar que haya al menos un modelo con nombre si es marca
+    if (tipo === 'marca') {
+      const modelosValidos = modelos.filter(m => m.nombre.trim())
+      if (modelosValidos.length === 0) {
+        setError('Agregá al menos un modelo para esta marca.')
+        return
+      }
+    }
+
     setSubmitting(true)
     try {
       const fd = new FormData()
@@ -46,6 +73,7 @@ export function PropuestaForm({ tipo, onClose }: Props) {
         fd.append('paginas_total', paginas || '1')
         await proponerLibro(fd)
       } else {
+        fd.append('modelos', JSON.stringify(modelos.filter(m => m.nombre.trim())))
         await proponerMarca(fd)
       }
       setEnviado(true)
@@ -61,7 +89,7 @@ export function PropuestaForm({ tipo, onClose }: Props) {
       <div className="text-center py-6">
         <div className="text-4xl mb-3">✅</div>
         <h3 className="font-display text-lg font-normal mb-2">¡Propuesta enviada!</h3>
-        <p className="text-sm text-ink2 mb-4">
+        <p className="text-sm font-sans mb-4" style={{ color: '#8A8A9A' }}>
           La revisaremos pronto. Cuando esté aprobada aparecerá en el catálogo.
         </p>
         <button onClick={onClose} className="btn-primary px-6">Cerrar</button>
@@ -87,11 +115,14 @@ export function PropuestaForm({ tipo, onClose }: Props) {
       </div>
 
       {duplicados.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-sm">
-          <p className="font-medium text-amber-800 mb-1">⚠️ Encontramos coincidencias similares:</p>
+        <div className="rounded-lg px-3 py-2.5 text-sm"
+             style={{ background: '#FEF3C7', border: '1px solid #FCD34D' }}>
+          <p className="font-medium mb-1" style={{ color: '#92400E' }}>
+            ⚠️ Encontramos coincidencias similares:
+          </p>
           <ul className="space-y-0.5">
             {duplicados.map((d, i) => (
-              <li key={i} className="text-amber-700 text-xs">
+              <li key={i} className="text-xs" style={{ color: '#B45309' }}>
                 • <strong>{d.nombre}</strong>
                 <span className="ml-1 opacity-60">
                   ({d.tipo === 'existente' ? 'ya existe en el catálogo' : 'propuesta pendiente'})
@@ -100,7 +131,7 @@ export function PropuestaForm({ tipo, onClose }: Props) {
             ))}
           </ul>
           {confirmando && (
-            <p className="text-amber-800 text-xs mt-2 font-medium">
+            <p className="text-xs mt-2 font-medium" style={{ color: '#92400E' }}>
               ¿Es diferente a las anteriores? Si es así, enviá igual y lo revisaremos.
             </p>
           )}
@@ -111,7 +142,7 @@ export function PropuestaForm({ tipo, onClose }: Props) {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">Editorial</label>
-            <input className="input" type="text" placeholder="Ej: Editorial XYZ"
+            <input className="input" type="text" placeholder="Ej: Hachette Heroes"
               value={editorial} onChange={e => setEditorial(e.target.value)} />
           </div>
           <div>
@@ -122,20 +153,72 @@ export function PropuestaForm({ tipo, onClose }: Props) {
         </div>
       )}
 
+      {/* Modelos — solo para marca */}
+      {tipo === 'marca' && (
+        <div>
+          <p className="font-script text-base mb-2" style={{ color: '#C9908A' }}>
+            Modelos de esta marca *
+          </p>
+          <p className="text-xs font-sans mb-2" style={{ color: '#8A8A9A' }}>
+            Ejemplo: "Set 168 colores punta pincel", "Set 36 colores doble punta"
+          </p>
+          <div className="space-y-2">
+            {modelos.map((m, i) => (
+              <div key={i} className="grid grid-cols-[1fr_80px_32px] gap-2 items-center">
+                <input
+                  className="input text-sm"
+                  type="text"
+                  placeholder="Ej: Set 168 colores punta pincel"
+                  value={m.nombre}
+                  onChange={e => updateModelo(i, 'nombre', e.target.value)}
+                />
+                <input
+                  className="input text-sm"
+                  type="number"
+                  min={1}
+                  placeholder="N° col."
+                  value={m.cantidad}
+                  onChange={e => updateModelo(i, 'cantidad', e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeModelo(i)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-lg"
+                  style={{ border: '1px solid #EDE0D4', color: '#8A8A9A' }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={addModelo}
+            className="w-full mt-2 py-2 rounded-xl text-sm font-sans"
+            style={{ border: '1px dashed #E8C4C0', color: '#C9908A' }}
+          >
+            + Agregar otro modelo
+          </button>
+        </div>
+      )}
+
       <div>
         <label className="label">Notas adicionales (opcional)</label>
         <textarea
           className="input" rows={2}
           placeholder={tipo === 'libro'
             ? 'Ej: Libro verde con flores en la tapa'
-            : 'Ej: Marcadores acrílicos, viene en sets de 168 colores'}
+            : 'Ej: Marcadores acrílicos importados de China'}
           value={notas}
           onChange={e => setNotas(e.target.value)}
         />
       </div>
 
       {error && (
-        <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
+        <p className="text-xs font-sans rounded-lg px-3 py-2"
+           style={{ background: '#F5E8E6', border: '1px solid #E8C4C0', color: '#C9908A' }}>
+          {error}
+        </p>
       )}
 
       <div className="flex gap-2 pt-1">
