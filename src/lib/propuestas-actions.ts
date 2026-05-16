@@ -174,42 +174,54 @@ export async function adminRechazarModelo(id: string, motivo: string) {
 export async function adminGetPropuestas() {
   const { supabase } = await getAdminUser()
 
-  const [libros, marcas, modelos] = await Promise.all([
-    supabase
-      .from('libros_propuestos')
-      .select('*, usuario:usuarios(nombre, social)')
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('marcas_propuestas')
-      .select('*')
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('modelos_propuestos')
-      .select('*, usuario:usuarios(nombre, social), marca:marcas(nombre)')
-      .is('marca_propuesta_id', null)
-      .order('created_at', { ascending: false }),
-  ])
+  const { data: libros } = await supabase
+    .from('libros_propuestos')
+    .select('*, usuario:usuarios!libros_propuestos_usuario_id_fkey(nombre, social)')
+    .order('created_at', { ascending: false })
 
-  // Traer modelos propuestos por marca por separado
-  const marcasData = marcas.data ?? []
-  const marcasConModelos = await Promise.all(
-    marcasData.map(async m => {
+  const { data: marcasRaw } = await supabase
+    .from('marcas_propuestas')
+    .select('*, usuario:usuarios!marcas_propuestas_usuario_id_fkey(nombre, social)')
+    .order('created_at', { ascending: false })
+
+  const { data: modelos } = await supabase
+    .from('modelos_propuestos')
+    .select('*, usuario:usuarios!modelos_propuestos_usuario_id_fkey(nombre, social), marca:marcas(nombre)')
+    .is('marca_propuesta_id', null)
+    .order('created_at', { ascending: false })
+
+  const marcas = await Promise.all(
+    (marcasRaw ?? []).map(async m => {
       const { data: modelosPropuestos } = await supabase
         .from('modelos_propuestos')
         .select('id, nombre, cantidad, estado')
         .eq('marca_propuesta_id', m.id)
+
       return {
         ...m,
-        usuario_nombre: m.usuario_nombre ?? '',
-        usuario_social: m.usuario_social ?? '',
-        modelos_propuestos: modelosPropuestos ?? []
+        usuario_nombre: (m.usuario as any)?.nombre ?? '',
+        usuario_social: (m.usuario as any)?.social ?? '',
+        modelos_propuestos: modelosPropuestos ?? [],
       }
     })
   )
 
+  const librosFormateados = (libros ?? []).map(l => ({
+    ...l,
+    usuario_nombre: (l.usuario as any)?.nombre ?? '',
+    usuario_social: (l.usuario as any)?.social ?? '',
+  }))
+
+  const modelosFormateados = (modelos ?? []).map(m => ({
+    ...m,
+    usuario_nombre: (m.usuario as any)?.nombre ?? '',
+    usuario_social: (m.usuario as any)?.social ?? '',
+    marca_nombre:   (m.marca as any)?.nombre ?? '',
+  }))
+
   return {
-    libros:  libros.data  ?? [],
-    marcas:  marcasConModelos,
-    modelos: modelos.data ?? [],
+    libros:  librosFormateados,
+    marcas,
+    modelos: modelosFormateados,
   }
 }
