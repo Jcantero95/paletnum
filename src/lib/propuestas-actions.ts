@@ -60,7 +60,6 @@ export async function proponerLibro(formData: FormData) {
   revalidatePath('/admin')
 }
 
-
 export async function proponerMarca(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -76,7 +75,6 @@ export async function proponerMarca(formData: FormData) {
 
   if (error) throw error
 
-  // Guardar modelos propuestos asociados a la marca
   const modelosRaw = formData.get('modelos') as string
   if (modelosRaw && marca) {
     const modelos: { nombre: string; cantidad: string }[] = JSON.parse(modelosRaw)
@@ -84,11 +82,11 @@ export async function proponerMarca(formData: FormData) {
     if (modelosValidos.length > 0) {
       await supabase.from('modelos_propuestos').insert(
         modelosValidos.map(m => ({
-          usuario_id:        user.id,
+          usuario_id:         user.id,
           marca_propuesta_id: marca.id,
-          nombre:            m.nombre.trim(),
-          cantidad:          m.cantidad ? parseInt(m.cantidad) : null,
-          estado:            'pendiente',
+          nombre:             m.nombre.trim(),
+          cantidad:           m.cantidad ? parseInt(m.cantidad) : null,
+          estado:             'pendiente',
         }))
       )
     }
@@ -114,15 +112,12 @@ export async function adminRechazarLibro(id: string, motivo: string) {
 export async function adminAprobarMarca(id: string) {
   const { supabase } = await getAdminUser()
 
-  // 1. Aprobar la marca
   const { error } = await supabase.rpc('admin_aprobar_marca', { p_id: id })
   if (error) throw error
 
-  // 2. Obtener el id de la marca aprobada
   const { data: marcaAprobada } = await supabase
     .from('marcas').select('id, nombre').order('created_at', { ascending: false }).limit(1).single()
 
-  // 3. Aprobar los modelos propuestos asociados
   if (marcaAprobada) {
     const { data: modelosPropuestos } = await supabase
       .from('modelos_propuestos')
@@ -131,7 +126,6 @@ export async function adminAprobarMarca(id: string) {
       .eq('estado', 'pendiente')
 
     if (modelosPropuestos && modelosPropuestos.length > 0) {
-      // Insertar modelos en la tabla real
       await supabase.from('modelos').insert(
         modelosPropuestos.map(m => ({
           marca_id: marcaAprobada.id,
@@ -139,7 +133,6 @@ export async function adminAprobarMarca(id: string) {
           cantidad: m.cantidad ?? null,
         }))
       )
-      // Marcar modelos propuestos como aprobados
       await supabase
         .from('modelos_propuestos')
         .update({ estado: 'aprobado' })
@@ -174,21 +167,42 @@ export async function adminRechazarModelo(id: string, motivo: string) {
 export async function adminGetPropuestas() {
   const { supabase } = await getAdminUser()
 
-  const { data: libros } = await supabase
+  const { data: librosRaw, error: librosError } = await supabase
     .from('libros_propuestos')
-    .select('*, usuario:usuarios!libros_propuestos_usuario_id_fkey(nombre, social)')
+    .select('*')
     .order('created_at', { ascending: false })
 
-  const { data: marcasRaw } = await supabase
+  const { data: marcasRaw, error: marcasError } = await supabase
     .from('marcas_propuestas')
-    .select('*, usuario:usuarios!marcas_propuestas_usuario_id_fkey(nombre, social)')
+    .select('*')
     .order('created_at', { ascending: false })
 
-  const { data: modelos } = await supabase
+  const { data: modelosRaw, error: modelosError } = await supabase
     .from('modelos_propuestos')
-    .select('*, usuario:usuarios!modelos_propuestos_usuario_id_fkey(nombre, social), marca:marcas(nombre)')
+    .select('*')
     .is('marca_propuesta_id', null)
     .order('created_at', { ascending: false })
+
+  console.log('librosError:', librosError)
+  console.log('marcasError:', marcasError)
+  console.log('modelosError:', modelosError)
+  console.log('marcasRaw count:', marcasRaw?.length)
+
+  // Traer nombres de usuarios por separado
+  const usuarioIds = [
+    ...(librosRaw ?? []).map(l => l.usuario_id),
+    ...(marcasRaw ?? []).map(m => m.usuario_id),
+    ...(modelosRaw ?? []).map(m => m.usuario_id),
+  ].filter(Boolean)
+
+  const { data: usuarios } = await supabase
+    .from('usuarios')
+    .select('id, nombre, social')
+    .in('id', [...new Set(usuarioIds)])
+
+  const usuarioMap = Object.fromEntries(
+    (usuarios ?? []).map(u => [u.id, u])
+  )
 
   const marcas = await Promise.all(
     (marcasRaw ?? []).map(async m => {
@@ -199,29 +213,24 @@ export async function adminGetPropuestas() {
 
       return {
         ...m,
-        usuario_nombre: (m.usuario as any)?.nombre ?? '',
-        usuario_social: (m.usuario as any)?.social ?? '',
+        usuario_nombre: usuarioMap[m.usuario_id]?.nombre ?? '',
+        usuario_social: usuarioMap[m.usuario_id]?.social ?? '',
         modelos_propuestos: modelosPropuestos ?? [],
       }
     })
   )
 
-  const librosFormateados = (libros ?? []).map(l => ({
+  const libros = (librosRaw ?? []).map(l => ({
     ...l,
-    usuario_nombre: (l.usuario as any)?.nombre ?? '',
-    usuario_social: (l.usuario as any)?.social ?? '',
+    usuario_nombre: usuarioMap[l.usuario_id]?.nombre ?? '',
+    usuario_social: usuarioMap[l.usuario_id]?.social ?? '',
   }))
 
-  const modelosFormateados = (modelos ?? []).map(m => ({
+  const modelos = (modelosRaw ?? []).map(m => ({
     ...m,
-    usuario_nombre: (m.usuario as any)?.nombre ?? '',
-    usuario_social: (m.usuario as any)?.social ?? '',
-    marca_nombre:   (m.marca as any)?.nombre ?? '',
+    usuario_nombre: usuarioMap[m.usuario_id]?.nombre ?? '',
+    usuario_social: usuarioMap[m.usuario_id]?.social ?? '',
   }))
 
-  return {
-    libros:  librosFormateados,
-    marcas,
-    modelos: modelosFormateados,
-  }
+  return { libros, marcas, modelos }
 }
