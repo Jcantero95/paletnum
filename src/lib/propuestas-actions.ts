@@ -115,21 +115,32 @@ export async function adminAprobarMarca(id: string) {
   const { data: marcaId, error } = await supabase.rpc('admin_aprobar_marca', { p_id: id })
   if (error) throw error
 
-  if (marcaId) {
+  console.log('marcaId raw:', JSON.stringify(marcaId))
+  console.log('marcaId type:', typeof marcaId)
+
+  const marcaIdFinal = typeof marcaId === 'string' ? marcaId : (marcaId as any)?.[0]?.admin_aprobar_marca ?? marcaId
+
+  console.log('marcaIdFinal:', marcaIdFinal)
+
+  if (marcaIdFinal) {
     const { data: modelosPropuestos } = await supabase
       .from('modelos_propuestos')
       .select('*')
       .eq('marca_propuesta_id', id)
       .eq('estado', 'pendiente')
 
+    console.log('modelosPropuestos:', JSON.stringify(modelosPropuestos))
+
     if (modelosPropuestos && modelosPropuestos.length > 0) {
-      await supabase.from('modelos').insert(
+      const { error: insertError } = await supabase.from('modelos').insert(
         modelosPropuestos.map(m => ({
-          marca_id: marcaId,
+          marca_id: marcaIdFinal,
           nombre:   m.nombre,
           cantidad: m.cantidad ?? null,
         }))
       )
+      console.log('insertError:', JSON.stringify(insertError))
+
       await supabase
         .from('modelos_propuestos')
         .update({ estado: 'aprobado' })
