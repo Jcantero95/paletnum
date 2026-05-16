@@ -98,6 +98,7 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
     if (file) {
       const comprimida = await comprimirImagen(file)
       setFotoFile(comprimida); setFotoPreview(URL.createObjectURL(comprimida))
+      e.target.value = ''
     }
   }
 
@@ -106,6 +107,7 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
     if (file) {
       const comprimida = await comprimirImagen(file)
       setRegistroFile(comprimida); setRegistroPreview(URL.createObjectURL(comprimida))
+      e.target.value = ''
     }
   }
 
