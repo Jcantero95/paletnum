@@ -54,7 +54,6 @@ export function PropuestaForm({ tipo, onClose }: Props) {
       return
     }
 
-    // Validar que haya al menos un modelo con nombre si es marca
     if (tipo === 'marca') {
       const modelosValidos = modelos.filter(m => m.nombre.trim())
       if (modelosValidos.length === 0) {
@@ -153,32 +152,23 @@ export function PropuestaForm({ tipo, onClose }: Props) {
         </div>
       )}
 
-      {/* Modelos — solo para marca */}
       {tipo === 'marca' && (
         <div>
-          <p className="font-script text-base mb-2" style={{ color: '#C9908A' }}>
+          <p className="font-script text-base mb-1" style={{ color: '#C9908A' }}>
             Modelos de esta marca *
           </p>
           <p className="text-xs font-sans mb-2" style={{ color: '#8A8A9A' }}>
-            Ejemplo: "Set 168 colores punta pincel", "Set 36 colores doble punta"
+            Ej: "Set 240 colores punta pincel", "Set 36 colores doble punta"
           </p>
           <div className="space-y-2">
             {modelos.map((m, i) => (
-              <div key={i} className="grid grid-cols-[1fr_80px_32px] gap-2 items-center">
+              <div key={i} className="grid grid-cols-[1fr_32px] gap-2 items-center">
                 <input
                   className="input text-sm"
                   type="text"
-                  placeholder="Ej: Set 168 colores punta pincel"
+                  placeholder="Ej: Set 240 colores punta pincel"
                   value={m.nombre}
                   onChange={e => updateModelo(i, 'nombre', e.target.value)}
-                />
-                <input
-                  className="input text-sm"
-                  type="number"
-                  min={1}
-                  placeholder="N° col."
-                  value={m.cantidad}
-                  onChange={e => updateModelo(i, 'cantidad', e.target.value)}
                 />
                 <button
                   type="button"
