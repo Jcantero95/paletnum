@@ -112,13 +112,10 @@ export async function adminRechazarLibro(id: string, motivo: string) {
 export async function adminAprobarMarca(id: string) {
   const { supabase } = await getAdminUser()
 
-  const { error } = await supabase.rpc('admin_aprobar_marca', { p_id: id })
+  const { data: marcaId, error } = await supabase.rpc('admin_aprobar_marca', { p_id: id })
   if (error) throw error
 
-  const { data: marcaAprobada } = await supabase
-    .from('marcas').select('id, nombre').order('created_at', { ascending: false }).limit(1).single()
-
-  if (marcaAprobada) {
+  if (marcaId) {
     const { data: modelosPropuestos } = await supabase
       .from('modelos_propuestos')
       .select('*')
@@ -128,7 +125,7 @@ export async function adminAprobarMarca(id: string) {
     if (modelosPropuestos && modelosPropuestos.length > 0) {
       await supabase.from('modelos').insert(
         modelosPropuestos.map(m => ({
-          marca_id: marcaAprobada.id,
+          marca_id: marcaId,
           nombre:   m.nombre,
           cantidad: m.cantidad ?? null,
         }))
