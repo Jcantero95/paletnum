@@ -175,21 +175,41 @@ export async function adminGetPropuestas() {
   const { supabase } = await getAdminUser()
 
   const [libros, marcas, modelos] = await Promise.all([
-    supabase.from('libros_propuestos')
+    supabase
+      .from('libros_propuestos')
       .select('*, usuario:usuarios(nombre, social)')
       .order('created_at', { ascending: false }),
-    supabase.from('marcas_propuestas')
-      .select('*, usuario:usuarios(nombre, social), modelos_propuestos(id, nombre, cantidad, estado)')
+    supabase
+      .from('marcas_propuestas')
+      .select('*')
       .order('created_at', { ascending: false }),
-    supabase.from('modelos_propuestos')
+    supabase
+      .from('modelos_propuestos')
       .select('*, usuario:usuarios(nombre, social), marca:marcas(nombre)')
       .is('marca_propuesta_id', null)
       .order('created_at', { ascending: false }),
   ])
 
+  // Traer modelos propuestos por marca por separado
+  const marcasData = marcas.data ?? []
+  const marcasConModelos = await Promise.all(
+    marcasData.map(async m => {
+      const { data: modelosPropuestos } = await supabase
+        .from('modelos_propuestos')
+        .select('id, nombre, cantidad, estado')
+        .eq('marca_propuesta_id', m.id)
+      return {
+        ...m,
+        usuario_nombre: m.usuario_nombre ?? '',
+        usuario_social: m.usuario_social ?? '',
+        modelos_propuestos: modelosPropuestos ?? []
+      }
+    })
+  )
+
   return {
     libros:  libros.data  ?? [],
-    marcas:  marcas.data  ?? [],
+    marcas:  marcasConModelos,
     modelos: modelos.data ?? [],
   }
 }
