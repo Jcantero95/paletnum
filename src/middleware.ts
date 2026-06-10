@@ -23,7 +23,8 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  await supabase.auth.getUser()
+  // Solo refrescar sesión, sin await getUser() que puede ser lento
+  const { data: { session } } = await supabase.auth.getSession()
 
   return supabaseResponse
 }
