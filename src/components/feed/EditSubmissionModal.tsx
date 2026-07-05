@@ -259,7 +259,7 @@ export function EditSubmissionModal({ submission, marcas, modelosByMarca, onClos
             {fotoPreview ? (
               <div className="relative">
                 <img src={fotoPreview} alt="preview"
-                  className="w-full max-h-48 object-cover rounded-xl" />
+                  className="w-full max-h-80 object-contain rounded-xl" style={{ background: '#F4EDE4' }} />
                 <button type="button"
                   onClick={() => { setFotoPreview(null); setFotoFile(null) }}
                   className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center font-bold shadow"

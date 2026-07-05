@@ -1,13 +1,15 @@
-'use client'
 
+Contribuirform · TSX
+'use client'
+ 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { createSubmission } from '@/lib/actions'
 import type { Libro, Marca, Modelo } from '@/types'
-
+ 
 type Modo = 'manual' | 'foto'
-
+ 
 interface ColorEntry {
   numero_libro: string
   nombre_color: string
@@ -15,18 +17,18 @@ interface ColorEntry {
   codigo_marcador: string
   modelo_idx: number
 }
-
+ 
 interface ModeloSeleccionado {
   marca_id: string
   modelo_id: string
 }
-
+ 
 interface Props {
   libros: Libro[]
   marcas: Marca[]
   modelosByMarca: Record<string, Modelo[]>
 }
-
+ 
 export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
   const router            = useRouter()
   const supabase          = createClient()
@@ -34,28 +36,28 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
   const camaraRef         = useRef<HTMLInputElement>(null)
   const registroRef       = useRef<HTMLInputElement>(null)
   const camaraRegistroRef = useRef<HTMLInputElement>(null)
-
+ 
   const [modo,      setModo]      = useState<Modo>('manual')
   const [libroId,   setLibroId]   = useState('')
   const [pagina,    setPagina]    = useState('')
   const [desc,      setDesc]      = useState('')
   const [publicado, setPublicado] = useState(false)
-
+ 
   const [modelosSeleccionados, setModelosSeleccionados] = useState<ModeloSeleccionado[]>([
     { marca_id: '', modelo_id: '' }
   ])
-
+ 
   const [fotoFile,        setFotoFile]        = useState<File | null>(null)
   const [registroFile,    setRegistroFile]    = useState<File | null>(null)
   const [fotoPreview,     setFotoPreview]     = useState<string | null>(null)
   const [registroPreview, setRegistroPreview] = useState<string | null>(null)
-
+ 
   const [colores, setColores] = useState<ColorEntry[]>([
     { numero_libro: '', nombre_color: '', hex: '#E8C4C0', codigo_marcador: '', modelo_idx: 0 }
   ])
   const [submitting, setSubmitting] = useState(false)
   const [error,      setError]      = useState<string | null>(null)
-
+ 
   async function comprimirImagen(file: File): Promise<File> {
     return new Promise((resolve) => {
       const reader = new FileReader()
@@ -84,7 +86,7 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
       }
     })
   }
-
+ 
   async function uploadFoto(file: File, tipo: 'foto' | 'registro', userId: string): Promise<string> {
     const path = `${userId}/${tipo}_${Date.now()}.jpg`
     const { error } = await supabase.storage
@@ -92,7 +94,7 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
     if (error) throw new Error(error.message)
     return supabase.storage.from('submissions-fotos').getPublicUrl(path).data.publicUrl
   }
-
+ 
   async function handleFoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) {
@@ -101,7 +103,7 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
       e.target.value = ''
     }
   }
-
+ 
   async function handleRegistro(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) {
@@ -110,19 +112,19 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
       e.target.value = ''
     }
   }
-
+ 
   function limpiarFoto() {
     setFotoFile(null); setFotoPreview(null)
     if (fotoRef.current)   fotoRef.current.value = ''
     if (camaraRef.current) camaraRef.current.value = ''
   }
-
+ 
   function limpiarRegistro() {
     setRegistroFile(null); setRegistroPreview(null)
     if (registroRef.current)       registroRef.current.value = ''
     if (camaraRegistroRef.current) camaraRegistroRef.current.value = ''
   }
-
+ 
   function updateModelo(idx: number, field: keyof ModeloSeleccionado, value: string) {
     setModelosSeleccionados(prev => prev.map((m, i) =>
       i === idx ? { ...m, [field]: value, ...(field === 'marca_id' ? { modelo_id: '' } : {}) } : m
@@ -137,7 +139,7 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
       c.modelo_idx > idx   ? { ...c, modelo_idx: c.modelo_idx - 1 } : c
     ))
   }
-
+ 
   function addColor() {
     setColores(p => [...p, { numero_libro: '', nombre_color: '', hex: '#E8C4C0', codigo_marcador: '', modelo_idx: 0 }])
   }
@@ -145,7 +147,7 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
   function updateColor(i: number, field: keyof ColorEntry, value: string | number) {
     setColores(p => p.map((c, idx) => idx === i ? { ...c, [field]: value } : c))
   }
-
+ 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -163,12 +165,12 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('No autenticado')
-
+ 
       let foto_url:     string | null = null
       let registro_url: string | null = null
       if (fotoFile)     foto_url     = await uploadFoto(fotoFile,     'foto',     user.id)
       if (registroFile) registro_url = await uploadFoto(registroFile, 'registro', user.id)
-
+ 
       const fd = new FormData()
       fd.append('libro_id',    libroId)
       fd.append('pagina',      pagina)
@@ -177,7 +179,7 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
       fd.append('modelos',     JSON.stringify(modelosValidos))
       if (foto_url)     fd.append('foto_url',     foto_url)
       if (registro_url) fd.append('registro_url', registro_url)
-
+ 
       const coloresFinales = modo === 'manual'
         ? colores.filter(c => c.numero_libro && c.codigo_marcador).map((c, i) => ({
             numero_libro:    parseInt(c.numero_libro),
@@ -189,7 +191,7 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
           }))
         : []
       fd.append('colores', JSON.stringify(coloresFinales))
-
+ 
       await createSubmission(fd)
       setPublicado(true)
     } catch (err) {
@@ -198,7 +200,7 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
       setSubmitting(false)
     }
   }
-
+ 
   if (publicado) {
     return (
       <div className="bg-white border border-borde rounded-2xl p-8 text-center shadow-cozy">
@@ -231,17 +233,17 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
       </div>
     )
   }
-
+ 
   const hayVariosModelos = modelosSeleccionados.length > 1
-
+ 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-
+ 
       <div className="card">
         <h2 className="font-display text-xl mb-4 pb-3" style={{ borderBottom: '1px solid #EDE0D4', color: '#5C5C6E' }}>
           Nueva versión de dibujo
         </h2>
-
+ 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <div className="sm:col-span-2">
             <label className="label">Libro / Serie</label>
@@ -261,7 +263,7 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
               value={desc} onChange={e => setDesc(e.target.value)} />
           </div>
         </div>
-
+ 
         {/* Marcas */}
         <div className="mb-4">
           <p className="font-script text-base mb-2" style={{ color: '#C9908A' }}>Marcadores que usaste</p>
@@ -302,13 +304,13 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
             + Usé otra marca también
           </button>
         </div>
-
+ 
         {/* Foto del dibujo */}
         <div>
           <label className="label">Foto del resultado terminado</label>
           {fotoPreview ? (
             <div className="relative">
-              <img src={fotoPreview} alt="preview" className="w-full max-h-52 object-cover rounded-2xl" />
+              <img src={fotoPreview} alt="preview" className="w-full max-h-80 object-contain rounded-2xl" style={{ background: '#F4EDE4' }} />
               <button type="button" onClick={limpiarFoto}
                 className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-md"
                 style={{ background: 'rgba(0,0,0,0.6)', color: 'white' }}>
@@ -335,11 +337,11 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
           <input ref={camaraRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFoto} />
         </div>
       </div>
-
+ 
       {/* Lista de colores */}
       <div className="card">
         <p className="font-script text-lg mb-4" style={{ color: '#C9908A' }}>Lista de colores usados</p>
-
+ 
         <div className="grid grid-cols-2 gap-2 mb-4">
           {(['manual', 'foto'] as Modo[]).map(m => (
             <button key={m} type="button" onClick={() => setModo(m)}
@@ -351,7 +353,7 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
             </button>
           ))}
         </div>
-
+ 
         {modo === 'manual' && (
           <div className="space-y-2">
             <div className="grid gap-1.5 text-[10px] uppercase tracking-wide font-sans px-1 mb-1"
@@ -393,12 +395,12 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
             </button>
           </div>
         )}
-
+ 
         {modo === 'foto' && (
           <div>
             {registroPreview ? (
               <div className="relative">
-                <img src={registroPreview} alt="registro" className="w-full max-h-52 object-cover rounded-2xl" />
+                <img src={registroPreview} alt="registro" className="w-full max-h-80 object-contain rounded-2xl" style={{ background: '#F4EDE4' }} />
                 <button type="button" onClick={limpiarRegistro}
                   className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-md"
                   style={{ background: 'rgba(0,0,0,0.6)', color: 'white' }}>
@@ -430,24 +432,24 @@ export function ContribuirForm({ libros, marcas, modelosByMarca }: Props) {
           </div>
         )}
       </div>
-
+ 
       <div className="rounded-xl px-4 py-3 text-sm" style={{ background: '#F5E8E6', border: '1px solid #E8C4C0' }}>
         <p className="font-sans" style={{ color: '#C9908A' }}>
           <span className="font-medium">Puntos que ganás:</span> +5 por publicar · +1 por cada like ♡
         </p>
       </div>
-
+ 
       {error && (
         <p className="text-sm font-sans rounded-xl px-4 py-3"
            style={{ background: '#F5E8E6', border: '1px solid #E8C4C0', color: '#C9908A' }}>
           {error}
         </p>
       )}
-
+ 
       <button type="submit" disabled={submitting} className="btn-primary w-full py-4 text-base">
         {submitting ? 'Publicando...' : 'Publicar mi resultado →'}
       </button>
-
+ 
     </form>
   )
 }

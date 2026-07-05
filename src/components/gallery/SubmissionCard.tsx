@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Image from 'next/image'
 import { toggleLike } from '@/lib/actions'
 import type { Submission, SubmissionModelo } from '@/types'
@@ -72,7 +72,7 @@ export function SubmissionCard({ submission, likedByMe, onSelect, isSelected }: 
             src={submission.foto_url}
             alt={`Resultado de ${submission.usuario?.nombre}`}
             fill
-            className="object-cover"
+            className="object-contain"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-5xl opacity-20">
@@ -174,10 +174,31 @@ interface ColorPanelProps {
 
 export function ColorPanel({ submission, onClose }: ColorPanelProps) {
   const [copied, setCopied] = useState(false)
+  const [slide, setSlide]   = useState(0)
+  const carruselRef         = useRef<HTMLDivElement>(null)
+
   const palette      = submission.submission_colores ?? []
   const modelos      = submission.modelos ?? []
   const tieneColores = palette.length > 0
   const tieneFotoReg = !!submission.registro_url
+
+  // Si hay foto de registro, va junto a la foto del resultado en un carrusel deslizable.
+  // Si los colores se cargaron a mano, solo se muestra la foto del resultado.
+  const imagenes = [submission.foto_url, tieneFotoReg ? submission.registro_url : null]
+    .filter((src): src is string => !!src)
+
+  function irASlide(i: number) {
+    const el = carruselRef.current
+    if (!el) return
+    el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' })
+    setSlide(i)
+  }
+
+  function onScrollCarrusel() {
+    const el = carruselRef.current
+    if (!el || el.clientWidth === 0) return
+    setSlide(Math.round(el.scrollLeft / el.clientWidth))
+  }
 
   async function copyList() {
     const marcasStr = modelos
@@ -203,59 +224,127 @@ export function ColorPanel({ submission, onClose }: ColorPanelProps) {
   }
 
   return (
-    <div className="bg-white rounded-2xl p-5 mt-4 shadow-cozy"
-         style={{ border: '1px solid rgba(92,92,110,0.15)' }}>
-
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4 pb-3"
-           style={{ borderBottom: '1px solid #EDE0D4' }}>
-        <div>
-          <h3 className="font-display text-lg" style={{ color: '#5C5C6E' }}>
-            Lista de <span style={{ color: '#C9908A', fontStyle: 'italic' }}>
-              {submission.usuario?.nombre}
-            </span>
-          </h3>
-          <div className="mt-1.5">
-            <MarcasChips modelos={modelos} />
-          </div>
-          <p className="text-xs font-sans mt-1" style={{ color: '#8A8A9A' }}>
-            {tieneColores && `${palette.length} colores`}
-            {tieneColores && tieneFotoReg && ' · '}
-            {tieneFotoReg && 'Registro fotográfico'}
-          </p>
-        </div>
+    <div
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto p-0 sm:p-4"
+      style={{ background: 'rgba(92,92,110,0.55)' }}
+      onClick={onClose}
+    >
+      <div
+        className="bg-white w-full sm:max-w-lg sm:rounded-2xl shadow-cozy-md relative min-h-screen sm:min-h-0"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Botón cerrar */}
         <button
           onClick={onClose}
-          className="text-xs font-sans px-3 py-1.5 rounded-xl transition-colors ml-3 flex-shrink-0"
-          style={{ background: '#F4EDE4', color: '#8A8A9A', border: '1px solid rgba(92,92,110,0.15)' }}
+          aria-label="Cerrar"
+          className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full flex items-center justify-center text-lg font-bold shadow-md transition-transform active:scale-90"
+          style={{ background: 'rgba(92,92,110,0.85)', color: 'white' }}
         >
-          Cerrar
+          ×
         </button>
-      </div>
 
-      {/* Foto del registro */}
-      {tieneFotoReg && (
-        <div className={tieneColores ? 'mb-5' : ''}>
-          <p className="text-xs uppercase tracking-wider font-sans mb-2" style={{ color: '#8A8A9A' }}>
-            Registro escrito
-          </p>
-          <img
-            src={submission.registro_url!}
-            alt="Registro de colores"
-            className="w-full rounded-xl object-contain max-h-72"
-            style={{ border: '1px solid rgba(92,92,110,0.1)' }}
-          />
-        </div>
-      )}
+        {/* Carrusel: foto del resultado + foto de registro (si existe) */}
+        {imagenes.length > 0 && (
+          <div className="relative w-full sm:rounded-t-2xl overflow-hidden" style={{ background: '#F4EDE4' }}>
+            <div
+              ref={carruselRef}
+              onScroll={onScrollCarrusel}
+              className="flex overflow-x-auto snap-x snap-mandatory"
+              style={{ scrollbarWidth: 'none', scrollBehavior: 'smooth' }}
+            >
+              {imagenes.map((src, i) => (
+                <img
+                  key={i}
+                  src={src}
+                  alt={i === 0 ? `Resultado de ${submission.usuario?.nombre}` : 'Registro de colores'}
+                  className="w-full flex-shrink-0 snap-center max-h-[60vh] object-contain"
+                />
+              ))}
+            </div>
 
-      {/* Tabla de colores */}
-      {tieneColores && (
-        <>
-          {tieneFotoReg && (
-            <p className="text-xs uppercase tracking-wider font-sans mb-2" style={{ color: '#8A8A9A' }}>
-              Colores cargados
+            {imagenes.length > 1 && (
+              <>
+                {slide > 0 && (
+                  <button
+                    onClick={() => irASlide(slide - 1)}
+                    aria-label="Foto anterior"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-base font-bold shadow-md"
+                    style={{ background: 'rgba(255,255,255,0.9)', color: '#5C5C6E' }}
+                  >
+                    ‹
+                  </button>
+                )}
+                {slide < imagenes.length - 1 && (
+                  <button
+                    onClick={() => irASlide(slide + 1)}
+                    aria-label="Foto siguiente"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-base font-bold shadow-md"
+                    style={{ background: 'rgba(255,255,255,0.9)', color: '#5C5C6E' }}
+                  >
+                    ›
+                  </button>
+                )}
+                <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+                  {imagenes.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => irASlide(i)}
+                      aria-label={`Ir a foto ${i + 1}`}
+                      className="h-1.5 rounded-full transition-all"
+                      style={{
+                        width: i === slide ? '16px' : '6px',
+                        background: i === slide ? '#C9908A' : 'rgba(255,255,255,0.8)',
+                      }}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        <div className="p-5">
+          {/* Usuario */}
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-display flex-shrink-0"
+                 style={{ background: '#C9908A' }}>
+              {submission.usuario?.nombre?.charAt(0) ?? '?'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-sans font-medium text-sm leading-tight truncate" style={{ color: '#5C5C6E' }}>
+                {submission.usuario?.nombre}
+              </p>
+              {submission.usuario?.social && (
+                <p className="text-[11px] truncate font-sans" style={{ color: '#8A8A9A' }}>
+                  {submission.usuario.social}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Descripción */}
+          {submission.descripcion && (
+            <p className="text-xs leading-relaxed font-sans italic mb-3" style={{ color: '#8A8A9A' }}>
+              "{submission.descripcion}"
             </p>
           )}
+
+          {/* Header lista de colores */}
+          <div className="mb-4 pb-3" style={{ borderBottom: '1px solid #EDE0D4' }}>
+            <MarcasChips modelos={modelos} />
+            <p className="text-xs font-sans mt-1.5" style={{ color: '#8A8A9A' }}>
+              {tieneColores && `${palette.length} colores`}
+              {tieneColores && tieneFotoReg && ' · '}
+              {tieneFotoReg && 'Registro fotográfico'}
+            </p>
+          </div>
+
+      {/* Tabla de colores (solo cuando se cargaron a mano) */}
+      {tieneColores && (
+        <>
+          <p className="text-xs uppercase tracking-wider font-sans mb-2" style={{ color: '#8A8A9A' }}>
+            Colores cargados
+          </p>
           <div className="overflow-x-auto -mx-1">
             <table className="w-full text-sm min-w-[300px]">
               <thead>
@@ -332,6 +421,8 @@ export function ColorPanel({ submission, onClose }: ColorPanelProps) {
           {copied ? '✓ Lista copiada' : '📋 Copiar lista completa'}
         </button>
       )}
+        </div>
+      </div>
     </div>
   )
 }
