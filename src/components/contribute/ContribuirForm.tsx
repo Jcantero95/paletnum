@@ -1,5 +1,3 @@
-
-Contribuirform · TSX
 'use client'
  
 import { useState, useRef } from 'react'
